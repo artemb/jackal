@@ -160,11 +160,6 @@ body {
   z-index: 1;
 }
 
-.ship.selected {
-  outline: 3px solid #ffd75e;
-  outline-offset: -3px;
-}
-
 .pirates {
   position: absolute;
   inset: 0;

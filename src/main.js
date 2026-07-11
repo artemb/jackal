@@ -26,16 +26,23 @@ function selectedPirate() {
   return state.pirates[state.selected.id];
 }
 
-function shipSelected() {
-  return state.selected?.kind === "ship";
+function pirateAboard(pirate) {
+  const ship = state.players[pirate.player].ship;
+  return ship.r === pirate.pos.r && ship.c === pirate.pos.c;
+}
+
+// When the selected pirate is aboard, the ship's shore moves are offered
+// alongside the disembark tile; clicking a sea cell sails the whole ship.
+function currentShipMoves() {
+  const pirate = selectedPirate();
+  if (!pirate || !pirateAboard(pirate)) return [];
+  return legalShipMoves(state, state.players[pirate.player]);
 }
 
 function currentMoves() {
-  if (shipSelected()) {
-    return legalShipMoves(state, state.players[state.current]);
-  }
   const pirate = selectedPirate();
-  return pirate ? legalMoves(state, pirate) : [];
+  if (!pirate) return [];
+  return [...legalMoves(state, pirate), ...currentShipMoves()];
 }
 
 function shipAt(r, c) {
@@ -48,29 +55,28 @@ function sameSelection(a, b) {
 }
 
 function onCellClick(r, c) {
-  if (currentMoves().some((m) => m.r === r && m.c === c)) {
-    if (shipSelected()) {
-      moveShip(state, state.players[state.current], r, c);
+  const pirate = selectedPirate();
+  if (pirate) {
+    if (currentShipMoves().some((m) => m.r === r && m.c === c)) {
+      moveShip(state, state.players[pirate.player], r, c);
       justFlipped = null;
-    } else {
-      const flipped = movePirate(state, selectedPirate(), r, c);
-      justFlipped = flipped ? key(r, c) : null;
+      render();
+      return;
     }
-    render();
-    justFlipped = null;
-    return;
+    if (legalMoves(state, pirate).some((m) => m.r === r && m.c === c)) {
+      const flipped = movePirate(state, pirate, r, c);
+      justFlipped = flipped ? key(r, c) : null;
+      render();
+      justFlipped = null;
+      return;
+    }
   }
 
-  // Build what can be selected on this cell: the current player's pirates,
-  // then their ship (if it is here and can sail). Clicking cycles through.
-  const player = state.players[state.current];
+  // Select one of the current player's pirates on this cell; clicking
+  // again cycles when several share the cell.
   const options = piratesAt(state, r, c)
     .filter((p) => p.player === state.current)
     .map((p) => ({ kind: "pirate", id: p.id }));
-  const shipHere = player.ship.r === r && player.ship.c === c;
-  if (shipHere && legalShipMoves(state, player).length > 0) {
-    options.push({ kind: "ship" });
-  }
 
   if (options.length === 0) {
     state.selected = null;
@@ -109,9 +115,6 @@ function render() {
         const shipEl = document.createElement("div");
         shipEl.className = `ship p${ship.id + 1}`;
         shipEl.textContent = "⛵";
-        if (shipSelected() && ship.id === state.current) {
-          shipEl.classList.add("selected");
-        }
         cell.appendChild(shipEl);
       }
 

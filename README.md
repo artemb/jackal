@@ -12,8 +12,9 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
 - Pirates disembark straight ahead from the ship; on land they move one
   step in any of the 8 directions. Stepping on a face-down tile flips it
   open, and the turn passes to the other player.
-- Ships can sail one step sideways along their shore (click the ship to
-  select it, cycling past the pirates aboard). Sailing needs at least one
+- Ships can sail one step sideways along their shore: select a pirate
+  aboard and the adjacent shore cells light up next to the disembark
+  tile — clicking one sails the whole ship. Sailing needs at least one
   pirate aboard, carries everyone on the ship, and spends the turn.
 - Coins: every map hides 13 stashes (5×1, 2×2, 3×3, 2×4, 1×5 coins) on
   random tiles, shown as a gold counter once flipped. A pirate standing on

@@ -58,8 +58,7 @@ export function createGame() {
     }
   }
 
-  // selected is null, { kind: "pirate", id } or { kind: "ship" }
-  // (the ship of the current player).
+  // selected is null or { kind: "pirate", id }.
   return { tiles, players, pirates, current: 0, selected: null };
 }
 
