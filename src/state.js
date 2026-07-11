@@ -20,6 +20,33 @@ export function key(r, c) {
 // 5 tiles with 1 coin, 2 with 2, 3 with 3, 2 with 4 and 1 with 5.
 const COIN_STASHES = [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 5];
 
+// Arrow tiles: 3 of each type per map, each rotated by a random multiple
+// of 90 degrees when the map is generated. Directions are [dr, dc].
+const N = [-1, 0];
+const E = [0, 1];
+const S = [1, 0];
+const W = [0, -1];
+const NE = [-1, 1];
+const SE = [1, 1];
+const SW = [1, -1];
+const NW = [-1, -1];
+
+export const ARROW_TYPES = {
+  "straight-1": [N],
+  "diagonal-1": [NE],
+  "straight-2": [N, S],
+  "diagonal-2": [NE, SW],
+  "three-way": [S, W, NE],
+  "straight-4": [N, E, S, W],
+  "diagonal-4": [NE, SE, SW, NW],
+};
+const ARROWS_PER_TYPE = 3;
+
+function rotateDir([dr, dc], quarters) {
+  for (let i = 0; i < quarters; i++) [dr, dc] = [dc, -dr];
+  return [dr, dc];
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -40,6 +67,16 @@ export function createGame() {
   COIN_STASHES.forEach((coins, i) => {
     tiles.get(spots[i]).coins = coins;
   });
+  let spot = COIN_STASHES.length;
+  for (const [arrow, dirs] of Object.entries(ARROW_TYPES)) {
+    for (let n = 0; n < ARROWS_PER_TYPE; n++) {
+      const tile = tiles.get(spots[spot++]);
+      const quarters = Math.floor(Math.random() * 4);
+      tile.type = "arrow";
+      tile.arrow = arrow;
+      tile.dirs = dirs.map((d) => rotateDir(d, quarters));
+    }
+  }
 
   const players = [
     { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
@@ -58,8 +95,10 @@ export function createGame() {
     }
   }
 
-  // selected is null or { kind: "pirate", id }.
-  return { tiles, players, pirates, current: 0, selected: null };
+  // selected is null or { kind: "pirate", id }. pending is set while a
+  // pirate stands on a multi-direction arrow and must choose where to fly:
+  // { pirateId, options: [{r,c}], visited: Set<tileKey> }.
+  return { tiles, players, pirates, current: 0, selected: null, pending: null };
 }
 
 function isOwnShip(state, playerId, r, c) {
@@ -126,11 +165,33 @@ export function dropCoin(state, pirate) {
   pirate.carrying = false;
 }
 
+function endTurn(state) {
+  state.selected = null;
+  state.pending = null;
+  state.current = state.current === 0 ? 1 : 0;
+}
+
+// Send a pirate back aboard its own ship after an arrow threw it into
+// the sea, onto the enemy ship, or around a loop. A carried coin sinks.
+function returnToShip(state, pirate) {
+  pirate.pos = { ...state.players[pirate.player].ship };
+  pirate.carrying = false;
+}
+
 // Move a pirate, flipping the destination tile if it is still face down.
-// Returns true if a tile was flipped. Boarding the own ship while
+// Returns true if any tile was flipped. Boarding the own ship while
 // carrying a coin stashes it automatically as the player's gold.
-// Ends the current player's turn.
+//
+// Landing on an arrow tile forces an extra move in one of the arrow's
+// directions within the same turn (chaining across further arrows). With
+// a single direction the extra move happens automatically; with several,
+// state.pending is set and chooseArrowMove must be called. The turn ends
+// once the chain settles.
 export function movePirate(state, pirate, r, c) {
+  return stepPirate(state, pirate, r, c, new Set());
+}
+
+function stepPirate(state, pirate, r, c, visited) {
   pirate.pos = { r, c };
   let flipped = false;
   const tile = state.tiles.get(key(r, c));
@@ -142,9 +203,48 @@ export function movePirate(state, pirate, r, c) {
     state.players[pirate.player].gold += 1;
     pirate.carrying = false;
   }
-  state.selected = null;
-  state.current = state.current === 0 ? 1 : 0;
+
+  if (tile?.type === "arrow") {
+    if (visited.has(key(r, c))) {
+      // Arrow loop within one turn: the pirate is thrown overboard.
+      returnToShip(state, pirate);
+      endTurn(state);
+      return flipped;
+    }
+    visited.add(key(r, c));
+    const options = tile.dirs.map(([dr, dc]) => ({ r: r + dr, c: c + dc }));
+    if (options.length === 1) {
+      return followArrow(state, pirate, options[0], visited) || flipped;
+    }
+    state.pending = { pirateId: pirate.id, options, visited };
+    state.selected = { kind: "pirate", id: pirate.id };
+    return flipped;
+  }
+
+  endTurn(state);
   return flipped;
+}
+
+function followArrow(state, pirate, { r, c }, visited) {
+  if (isIsland(r, c) || isOwnShip(state, pirate.player, r, c)) {
+    return stepPirate(state, pirate, r, c, visited);
+  }
+  // The arrow points into the sea or onto the enemy ship.
+  returnToShip(state, pirate);
+  endTurn(state);
+  return false;
+}
+
+// Resolve a pending multi-direction arrow by picking one of its options.
+export function chooseArrowMove(state, target) {
+  const pending = state.pending;
+  if (!pending) return;
+  if (!pending.options.some((o) => o.r === target.r && o.c === target.c)) {
+    return;
+  }
+  const pirate = state.pirates[pending.pirateId];
+  state.pending = null;
+  followArrow(state, pirate, target, pending.visited);
 }
 
 export function piratesAt(state, r, c) {
@@ -176,6 +276,5 @@ export function moveShip(state, player, r, c) {
     p.pos = { r, c };
   }
   player.ship = { r, c };
-  state.selected = null;
-  state.current = state.current === 0 ? 1 : 0;
+  endTurn(state);
 }

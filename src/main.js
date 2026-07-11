@@ -12,7 +12,19 @@ import {
   canPickUp,
   pickUpCoin,
   dropCoin,
+  chooseArrowMove,
 } from "./state.js";
+
+const DIR_GLYPHS = {
+  "-1,0": "↑",
+  "-1,1": "↗",
+  "0,1": "→",
+  "1,1": "↘",
+  "1,0": "↓",
+  "1,-1": "↙",
+  "0,-1": "←",
+  "-1,-1": "↖",
+};
 
 const state = createGame();
 const boardEl = document.getElementById("board");
@@ -55,6 +67,16 @@ function sameSelection(a, b) {
 }
 
 function onCellClick(r, c) {
+  // A pirate mid-flight on a multi-direction arrow locks the input:
+  // the only valid clicks are the arrow's destinations.
+  if (state.pending) {
+    if (state.pending.options.some((o) => o.r === r && o.c === c)) {
+      chooseArrowMove(state, { r, c });
+      render();
+    }
+    return;
+  }
+
   const pirate = selectedPirate();
   if (pirate) {
     if (currentShipMoves().some((m) => m.r === r && m.c === c)) {
@@ -88,7 +110,8 @@ function onCellClick(r, c) {
 }
 
 function render() {
-  const moves = currentMoves();
+  const moves = state.pending ? state.pending.options : currentMoves();
+  const moveClass = state.pending ? "arrow-target" : "move-target";
   boardEl.innerHTML = "";
 
   for (let r = 0; r < SIZE; r++) {
@@ -100,6 +123,15 @@ function render() {
         const tile = state.tiles.get(key(r, c));
         cell.classList.add("tile", tile.open ? "open" : "closed");
         if (justFlipped === key(r, c)) cell.classList.add("flipping");
+        if (tile.open && tile.type === "arrow") {
+          cell.classList.add("arrow");
+          const arrowsEl = document.createElement("div");
+          arrowsEl.className = "arrows";
+          arrowsEl.textContent = tile.dirs
+            .map((d) => DIR_GLYPHS[d.join(",")])
+            .join("");
+          cell.appendChild(arrowsEl);
+        }
         if (tile.open && tile.coins > 0) {
           const coinsEl = document.createElement("div");
           coinsEl.className = "coins";
@@ -136,7 +168,7 @@ function render() {
       }
 
       if (moves.some((m) => m.r === r && m.c === c)) {
-        cell.classList.add("move-target");
+        cell.classList.add(moveClass);
       }
 
       cell.addEventListener("click", () => onCellClick(r, c));
@@ -161,6 +193,13 @@ function render() {
 
 function renderActions() {
   actionsEl.innerHTML = "";
+  if (state.pending) {
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = "Arrow! Choose where the pirate flies.";
+    actionsEl.appendChild(hint);
+    return;
+  }
   const pirate = selectedPirate();
   if (!pirate || pirate.player !== state.current) return;
 

@@ -23,6 +23,12 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
   tile, and boarding its own ship stashes the coin automatically as the
   player's gold shown in the top bar.
 
+- Arrows: 21 arrow tiles (7 types × 3, randomly rotated) force the pirate
+  that lands on them to fly on in one of the arrow's directions — chosen
+  by the player when there are several, automatic when there is one, and
+  chaining across further arrows. Arrows into the sea or the enemy ship
+  throw the pirate back aboard its own ship (a carried coin sinks).
+
 The full rule set lives in [RULES.md](RULES.md) — tests are written
 against those numbered rules.
 
@@ -36,6 +42,6 @@ npm test      # run the rule tests
 
 ## Planned next
 
-- Real tile types (arrows, traps, …).
+- More tile types (traps, rum, crocodile, …).
 - Combat: landing on enemy pirates sends them back to their ship.
 - Win condition: bring the most gold back to your ship.

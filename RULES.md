@@ -62,6 +62,30 @@ disagree, one of them is a bug — decide which and fix it.
   is stashed automatically and counts toward that player's gold. Stashed
   gold cannot be taken back out.
 
+## A. Arrows
+
+- **A1.** Every map has 21 arrow tiles, 3 of each type:
+  single straight, single diagonal, double straight (opposite directions),
+  double diagonal (opposite directions), three-way (one diagonal plus the
+  two straight directions opposite it, e.g. S+W+NE), four-way straight
+  and four-way diagonal.
+- **A2.** Each arrow tile is rotated by a random multiple of 90° fixed
+  when the map is generated.
+- **A3.** A pirate that lands on an arrow tile must immediately move again
+  in one of the arrow's directions, within the same turn. The turn only
+  passes once the pirate comes to rest.
+- **A4.** If the arrow has a single direction the extra move is automatic;
+  with several directions the moving player chooses one.
+- **A5.** Arrow moves chain: landing on another arrow forces another move.
+  If a chain re-enters an arrow tile already visited this turn, the pirate
+  is thrown back aboard its own ship.
+- **A6.** If an arrow points into the sea or onto the enemy ship, taking it
+  returns the pirate to its own ship; a carried coin is lost. An arrow
+  pointing at the pirate's own ship boards it normally (a carried coin is
+  stashed as per C8).
+- **A7.** Forced arrow moves ignore the carrying restriction C6: they may
+  flip face-down tiles, and the carried coin travels along.
+
 ## T. Turns
 
 - **T1.** Red moves first.
