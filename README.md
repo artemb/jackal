@@ -31,6 +31,7 @@ against those numbered rules.
 ```sh
 npm install
 npm run dev   # serves on http://localhost:4173
+npm test      # run the rule tests
 ```
 
 ## Planned next
