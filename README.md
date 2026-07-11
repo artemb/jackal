@@ -15,11 +15,15 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
 - Ships can sail one step sideways along their shore (click the ship to
   select it, cycling past the pirates aboard). Sailing needs at least one
   pirate aboard, carries everyone on the ship, and spends the turn.
-- Coins: each tile has a 15% chance to hide 1–5 coins, shown as a gold
-  counter once flipped. A pirate standing on coins can pick one up (a free
-  action); while carrying it can only move to already discovered tiles or
-  its own ship. It can drop the coin anywhere, or stash it aboard the ship
-  where it counts toward the player's gold shown in the top bar.
+- Coins: every map hides 13 stashes (5×1, 2×2, 3×3, 2×4, 1×5 coins) on
+  random tiles, shown as a gold counter once flipped. A pirate standing on
+  coins can pick one up (a free action); while carrying it can only move
+  to already discovered tiles or its own ship. It can drop the coin on its
+  tile, and boarding its own ship stashes the coin automatically as the
+  player's gold shown in the top bar.
+
+The full rule set lives in [RULES.md](RULES.md) — tests are written
+against those numbered rules.
 
 ## Running locally
 
