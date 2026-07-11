@@ -86,6 +86,20 @@ disagree, one of them is a bug — decide which and fix it.
 - **A7.** Forced arrow moves ignore the carrying restriction C6: they may
   flip face-down tiles, and the carried coin travels along.
 
+## D. Slow tiles
+
+- **D1.** Every map has 11 slow tiles: 5 jungle (2 turns), 4 desert
+  (3 turns), 1 island (4 turns) and 1 mountain (5 turns).
+- **D2.** Crossing a slow tile takes as many turns as it has steps.
+  Entering the tile counts as the first turn; after that the pirate's only
+  legal move is stepping in place on its own tile (spending the turn)
+  until it has spent all the steps, then it may move off normally.
+- **D3.** Leaving a slow tile resets the pirate's crossing progress;
+  re-entering starts the crossing over.
+- **D4.** A pirate thrown onto a slow tile by an arrow starts crossing
+  there; the landing counts as the first turn and any arrow chain ends.
+- **D5.** Free actions (C3, C7) remain available while crossing.
+
 ## T. Turns
 
 - **T1.** Red moves first.

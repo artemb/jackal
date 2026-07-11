@@ -47,6 +47,16 @@ function rotateDir([dr, dc], quarters) {
   return [dr, dc];
 }
 
+// Slow tiles take several turns to cross: entering is the first turn,
+// then the pirate must step in place until it has spent `steps` turns
+// on the tile before it may move on.
+export const SLOW_TILES = [
+  { slow: "jungle", steps: 2, count: 5 },
+  { slow: "desert", steps: 3, count: 4 },
+  { slow: "island", steps: 4, count: 1 },
+  { slow: "mountain", steps: 5, count: 1 },
+];
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -77,6 +87,14 @@ export function createGame() {
       tile.dirs = dirs.map((d) => rotateDir(d, quarters));
     }
   }
+  for (const { slow, steps, count } of SLOW_TILES) {
+    for (let n = 0; n < count; n++) {
+      const tile = tiles.get(spots[spot++]);
+      tile.type = "slow";
+      tile.slow = slow;
+      tile.steps = steps;
+    }
+  }
 
   const players = [
     { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
@@ -91,6 +109,8 @@ export function createGame() {
         player: player.id,
         pos: { ...player.ship },
         carrying: false,
+        // turns spent on the current slow tile (0 when not on one)
+        progress: 0,
       });
     }
   }
@@ -128,6 +148,12 @@ export function legalMoves(state, pirate) {
     const fr = r + player.forward;
     if (canEnterTile(fr, c)) moves.push({ r: fr, c });
     return moves;
+  }
+
+  // Still crossing a slow tile: the only move is to keep walking in place.
+  const here = state.tiles.get(key(r, c));
+  if (here?.type === "slow" && pirate.progress < here.steps) {
+    return [{ r, c }];
   }
 
   for (let dr = -1; dr <= 1; dr++) {
@@ -176,6 +202,7 @@ function endTurn(state) {
 function returnToShip(state, pirate) {
   pirate.pos = { ...state.players[pirate.player].ship };
   pirate.carrying = false;
+  pirate.progress = 0;
 }
 
 // Move a pirate, flipping the destination tile if it is still face down.
@@ -192,6 +219,7 @@ export function movePirate(state, pirate, r, c) {
 }
 
 function stepPirate(state, pirate, r, c, visited) {
+  const stayed = pirate.pos.r === r && pirate.pos.c === c;
   pirate.pos = { r, c };
   let flipped = false;
   const tile = state.tiles.get(key(r, c));
@@ -220,6 +248,11 @@ function stepPirate(state, pirate, r, c, visited) {
     state.selected = { kind: "pirate", id: pirate.id };
     return flipped;
   }
+
+  // Crossing progress: entering a slow tile is the first turn, stepping
+  // in place adds one; anything else resets it.
+  pirate.progress =
+    tile?.type === "slow" ? (stayed ? pirate.progress + 1 : 1) : 0;
 
   endTurn(state);
   return flipped;

@@ -28,8 +28,18 @@ function blankGame() {
     tile.coins = 0;
     delete tile.dirs;
     delete tile.arrow;
+    delete tile.slow;
+    delete tile.steps;
   }
   return s;
+}
+
+function setSlow(state, r, c, steps, { open = false } = {}) {
+  const tile = state.tiles.get(key(r, c));
+  tile.type = "slow";
+  tile.slow = "jungle";
+  tile.steps = steps;
+  tile.open = open;
 }
 
 function setArrow(state, r, c, dirs, { open = false } = {}) {
@@ -377,6 +387,69 @@ describe("A. Arrows", () => {
     expect(p.pos).toEqual({ r: 5, c: 6 });
     expect(s.tiles.get(key(5, 6)).open).toBe(true);
     expect(p.carrying).toBe(true);
+  });
+});
+
+describe("D. Slow tiles", () => {
+  it("D1: every map has 5 jungle(2), 4 desert(3), 1 island(4), 1 mountain(5)", () => {
+    const s = createGame();
+    const counts = {};
+    for (const tile of s.tiles.values()) {
+      if (tile.type === "slow") {
+        counts[tile.slow] = (counts[tile.slow] ?? 0) + 1;
+        const steps = { jungle: 2, desert: 3, island: 4, mountain: 5 };
+        expect(tile.steps).toBe(steps[tile.slow]);
+      }
+    }
+    expect(counts).toEqual({ jungle: 5, desert: 4, island: 1, mountain: 1 });
+  });
+
+  it("D2: crossing takes as many turns as the tile has steps", () => {
+    const s = blankGame();
+    setSlow(s, 11, 6, 3); // a 3-turn tile
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6); // turn 1: enter
+    expect(p.progress).toBe(1);
+    expect(s.current).toBe(1);
+
+    s.current = 0;
+    expect(legalMoves(s, p)).toEqual([{ r: 11, c: 6 }]); // stuck: step in place
+    movePirate(s, p, 11, 6); // turn 2
+    expect(p.progress).toBe(2);
+    expect(s.current).toBe(1);
+
+    s.current = 0;
+    movePirate(s, p, 11, 6); // turn 3: crossing done
+    expect(p.progress).toBe(3);
+    expect(legalMoves(s, p).length).toBeGreaterThan(1); // free to move on
+  });
+
+  it("D3: leaving a slow tile resets progress; re-entering starts over", () => {
+    const s = blankGame();
+    setSlow(s, 6, 6, 2);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6);
+    movePirate(s, p, 6, 6); // crossing done
+    movePirate(s, p, 6, 5); // leave
+    expect(p.progress).toBe(0);
+    movePirate(s, p, 6, 6); // re-enter
+    expect(p.progress).toBe(1);
+    expect(legalMoves(s, p)).toEqual([{ r: 6, c: 6 }]);
+  });
+
+  it("D4: an arrow can throw a pirate onto a slow tile; entry counts as turn one", () => {
+    const s = blankGame();
+    setArrow(s, 11, 6, [[-1, 0]]);
+    setSlow(s, 10, 6, 2);
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6); // arrow chains onto the jungle
+    expect(p.pos).toEqual({ r: 10, c: 6 });
+    expect(p.progress).toBe(1);
+    expect(s.pending).toBe(null);
+    expect(s.current).toBe(1);
+    s.current = 0;
+    expect(legalMoves(s, p)).toEqual([{ r: 10, c: 6 }]);
   });
 });
 

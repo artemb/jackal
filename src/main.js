@@ -15,6 +15,13 @@ import {
   chooseArrowMove,
 } from "./state.js";
 
+const SLOW_GLYPHS = {
+  jungle: "🌴",
+  desert: "🌵",
+  island: "🏝️",
+  mountain: "⛰️",
+};
+
 const DIR_GLYPHS = {
   "-1,0": "↑",
   "-1,1": "↗",
@@ -123,6 +130,17 @@ function render() {
         const tile = state.tiles.get(key(r, c));
         cell.classList.add("tile", tile.open ? "open" : "closed");
         if (justFlipped === key(r, c)) cell.classList.add("flipping");
+        if (tile.open && tile.type === "slow") {
+          cell.classList.add("slow", tile.slow);
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = SLOW_GLYPHS[tile.slow];
+          cell.appendChild(terrainEl);
+          const stepsEl = document.createElement("div");
+          stepsEl.className = "steps";
+          stepsEl.textContent = tile.steps;
+          cell.appendChild(stepsEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");
@@ -202,6 +220,17 @@ function renderActions() {
   }
   const pirate = selectedPirate();
   if (!pirate || pirate.player !== state.current) return;
+
+  const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  if (tile?.type === "slow" && pirate.progress < tile.steps) {
+    const left = tile.steps - pirate.progress;
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = `Crossing the ${tile.slow}: ${left} more turn${
+      left > 1 ? "s" : ""
+    } on this tile.`;
+    actionsEl.appendChild(hint);
+  }
 
   if (canPickUp(state, pirate)) {
     const btn = document.createElement("button");

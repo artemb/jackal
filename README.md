@@ -29,6 +29,11 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
   chaining across further arrows. Arrows into the sea or the enemy ship
   throw the pirate back aboard its own ship (a carried coin sinks).
 
+- Slow tiles: 5 jungle (2 turns), 4 desert (3), 1 island (4) and
+  1 mountain (5). Crossing takes that many turns — entering counts as the
+  first, then the pirate steps in place (click its own tile) until the
+  crossing is done.
+
 The full rule set lives in [RULES.md](RULES.md) — tests are written
 against those numbered rules.
 
