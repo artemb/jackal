@@ -197,3 +197,34 @@ body {
   outline: 3px solid #ffd75e;
   outline-offset: 1px;
 }
+
+.pirate.carrying {
+  border-color: #ffd75e;
+  box-shadow: 0 0 5px 2px rgba(255, 215, 94, 0.8);
+}
+
+#scores {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+#actions {
+  min-height: 34px;
+  display: flex;
+  gap: 8px;
+}
+
+#actions button {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid #a87a10;
+  background: linear-gradient(#ffe08a, #d9a520);
+  color: #4a2f00;
+  cursor: pointer;
+}
+
+#actions button:hover {
+  filter: brightness(1.08);
+}

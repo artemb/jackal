@@ -9,11 +9,16 @@ import {
   piratesAboard,
   legalShipMoves,
   moveShip,
+  canPickUp,
+  pickUpCoin,
+  dropCoin,
 } from "./state.js";
 
 const state = createGame();
 const boardEl = document.getElementById("board");
 const turnEl = document.getElementById("turn-indicator");
+const scoresEl = document.getElementById("scores");
+const actionsEl = document.getElementById("actions");
 let justFlipped = null; // key of a cell to play the flip animation on
 
 function selectedPirate() {
@@ -117,6 +122,7 @@ function render() {
         for (const p of here) {
           const el = document.createElement("div");
           el.className = `pirate p${p.player + 1}`;
+          if (p.carrying) el.classList.add("carrying");
           if (selectedPirate()?.id === p.id) el.classList.add("selected");
           group.appendChild(el);
         }
@@ -142,6 +148,41 @@ function render() {
   dot.style.background = player.id === 0 ? "var(--p1)" : "var(--p2)";
   turnEl.appendChild(dot);
   turnEl.appendChild(document.createTextNode(`${player.name}'s turn`));
+
+  scoresEl.textContent = state.players
+    .map((p) => `${p.name} 🪙 ${p.gold}`)
+    .join("  ·  ");
+
+  renderActions();
+}
+
+function renderActions() {
+  actionsEl.innerHTML = "";
+  const pirate = selectedPirate();
+  if (!pirate || pirate.player !== state.current) return;
+
+  if (canPickUp(state, pirate)) {
+    const btn = document.createElement("button");
+    btn.textContent = "Pick up coin";
+    btn.addEventListener("click", () => {
+      pickUpCoin(state, pirate);
+      render();
+    });
+    actionsEl.appendChild(btn);
+  }
+
+  if (pirate.carrying) {
+    const btn = document.createElement("button");
+    const onShip =
+      state.players[pirate.player].ship.r === pirate.pos.r &&
+      state.players[pirate.player].ship.c === pirate.pos.c;
+    btn.textContent = onShip ? "Stash coin on ship" : "Drop coin";
+    btn.addEventListener("click", () => {
+      dropCoin(state, pirate);
+      render();
+    });
+    actionsEl.appendChild(btn);
+  }
 }
 
 render();

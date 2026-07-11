@@ -31,8 +31,8 @@ export function createGame() {
   }
 
   const players = [
-    { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1 },
-    { id: 1, name: "Blue", ship: { r: 0, c: 6 }, forward: 1 },
+    { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
+    { id: 1, name: "Blue", ship: { r: 0, c: 6 }, forward: 1, gold: 0 },
   ];
 
   const pirates = [];
@@ -42,6 +42,7 @@ export function createGame() {
         id: pirates.length,
         player: player.id,
         pos: { ...player.ship },
+        carrying: false,
       });
     }
   }
@@ -62,15 +63,21 @@ function onShip(state, pirate) {
 
 // Legal destinations for a pirate. From the ship a pirate may only
 // disembark straight ahead; on land it moves one step in any of the
-// 8 directions onto island tiles, or back onto its own ship.
+// 8 directions onto island tiles, or back onto its own ship. A pirate
+// carrying a coin may only enter already discovered (open) tiles.
 export function legalMoves(state, pirate) {
   const { r, c } = pirate.pos;
   const moves = [];
 
+  const canEnterTile = (nr, nc) => {
+    if (!isIsland(nr, nc)) return false;
+    return !pirate.carrying || state.tiles.get(key(nr, nc)).open;
+  };
+
   if (onShip(state, pirate)) {
     const player = state.players[pirate.player];
     const fr = r + player.forward;
-    if (isIsland(fr, c)) moves.push({ r: fr, c });
+    if (canEnterTile(fr, c)) moves.push({ r: fr, c });
     return moves;
   }
 
@@ -79,12 +86,38 @@ export function legalMoves(state, pirate) {
       if (dr === 0 && dc === 0) continue;
       const nr = r + dr;
       const nc = c + dc;
-      if (isIsland(nr, nc) || isOwnShip(state, pirate.player, nr, nc)) {
+      if (canEnterTile(nr, nc) || isOwnShip(state, pirate.player, nr, nc)) {
         moves.push({ r: nr, c: nc });
       }
     }
   }
   return moves;
+}
+
+// Picking up and dropping coins are free actions (they do not end the
+// turn). A pirate carries at most one coin; the coin travels with the
+// pirate on every subsequent move. Dropping on the own ship banks the
+// coin as the player's gold; dropping on a tile leaves it there.
+export function canPickUp(state, pirate) {
+  if (pirate.carrying || onShip(state, pirate)) return false;
+  const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  return tile != null && tile.coins > 0;
+}
+
+export function pickUpCoin(state, pirate) {
+  if (!canPickUp(state, pirate)) return;
+  state.tiles.get(key(pirate.pos.r, pirate.pos.c)).coins -= 1;
+  pirate.carrying = true;
+}
+
+export function dropCoin(state, pirate) {
+  if (!pirate.carrying) return;
+  if (onShip(state, pirate)) {
+    state.players[pirate.player].gold += 1;
+  } else {
+    state.tiles.get(key(pirate.pos.r, pirate.pos.c)).coins += 1;
+  }
+  pirate.carrying = false;
 }
 
 // Move a pirate, flipping the destination tile if it is still face down.
