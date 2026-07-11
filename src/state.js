@@ -16,19 +16,30 @@ export function key(r, c) {
   return `${r},${c}`;
 }
 
-// Chance that a freshly generated tile hides coins (1-5 of them).
-const COIN_CHANCE = 0.15;
+// Every map hides the same coin stashes on random tiles:
+// 5 tiles with 1 coin, 2 with 2, 3 with 3, 2 with 4 and 1 with 5.
+const COIN_STASHES = [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 5];
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 export function createGame() {
   const tiles = new Map();
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
       if (!isIsland(r, c)) continue;
-      const coins =
-        Math.random() < COIN_CHANCE ? 1 + Math.floor(Math.random() * 5) : 0;
-      tiles.set(key(r, c), { type: "empty", open: false, coins });
+      tiles.set(key(r, c), { type: "empty", open: false, coins: 0 });
     }
   }
+  const spots = shuffle([...tiles.keys()]);
+  COIN_STASHES.forEach((coins, i) => {
+    tiles.get(spots[i]).coins = coins;
+  });
 
   const players = [
     { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
