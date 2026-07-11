@@ -6,6 +6,9 @@ import {
   legalMoves,
   movePirate,
   piratesAt,
+  piratesAboard,
+  legalShipMoves,
+  moveShip,
 } from "./state.js";
 
 const state = createGame();
@@ -14,10 +17,18 @@ const turnEl = document.getElementById("turn-indicator");
 let justFlipped = null; // key of a cell to play the flip animation on
 
 function selectedPirate() {
-  return state.selected == null ? null : state.pirates[state.selected];
+  if (state.selected?.kind !== "pirate") return null;
+  return state.pirates[state.selected.id];
+}
+
+function shipSelected() {
+  return state.selected?.kind === "ship";
 }
 
 function currentMoves() {
+  if (shipSelected()) {
+    return legalShipMoves(state, state.players[state.current]);
+  }
   const pirate = selectedPirate();
   return pirate ? legalMoves(state, pirate) : [];
 }
@@ -26,23 +37,41 @@ function shipAt(r, c) {
   return state.players.find((p) => p.ship.r === r && p.ship.c === c) ?? null;
 }
 
+function sameSelection(a, b) {
+  if (!a || !b) return false;
+  return a.kind === b.kind && a.id === b.id;
+}
+
 function onCellClick(r, c) {
-  const pirate = selectedPirate();
-  if (pirate && currentMoves().some((m) => m.r === r && m.c === c)) {
-    const flipped = movePirate(state, pirate, r, c);
-    justFlipped = flipped ? key(r, c) : null;
+  if (currentMoves().some((m) => m.r === r && m.c === c)) {
+    if (shipSelected()) {
+      moveShip(state, state.players[state.current], r, c);
+      justFlipped = null;
+    } else {
+      const flipped = movePirate(state, selectedPirate(), r, c);
+      justFlipped = flipped ? key(r, c) : null;
+    }
     render();
     justFlipped = null;
     return;
   }
 
-  // Select (or cycle through) the current player's pirates on this cell.
-  const own = piratesAt(state, r, c).filter((p) => p.player === state.current);
-  if (own.length > 0) {
-    const idx = own.findIndex((p) => p.id === state.selected);
-    state.selected = own[(idx + 1) % own.length].id;
-  } else {
+  // Build what can be selected on this cell: the current player's pirates,
+  // then their ship (if it is here and can sail). Clicking cycles through.
+  const player = state.players[state.current];
+  const options = piratesAt(state, r, c)
+    .filter((p) => p.player === state.current)
+    .map((p) => ({ kind: "pirate", id: p.id }));
+  const shipHere = player.ship.r === r && player.ship.c === c;
+  if (shipHere && legalShipMoves(state, player).length > 0) {
+    options.push({ kind: "ship" });
+  }
+
+  if (options.length === 0) {
     state.selected = null;
+  } else {
+    const idx = options.findIndex((o) => sameSelection(o, state.selected));
+    state.selected = options[(idx + 1) % options.length];
   }
   render();
 }
@@ -69,6 +98,9 @@ function render() {
         const shipEl = document.createElement("div");
         shipEl.className = `ship p${ship.id + 1}`;
         shipEl.textContent = "⛵";
+        if (shipSelected() && ship.id === state.current) {
+          shipEl.classList.add("selected");
+        }
         cell.appendChild(shipEl);
       }
 
@@ -79,7 +111,7 @@ function render() {
         for (const p of here) {
           const el = document.createElement("div");
           el.className = `pirate p${p.player + 1}`;
-          if (p.id === state.selected) el.classList.add("selected");
+          if (selectedPirate()?.id === p.id) el.classList.add("selected");
           group.appendChild(el);
         }
         cell.appendChild(group);

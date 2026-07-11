@@ -40,6 +40,8 @@ export function createGame() {
     }
   }
 
+  // selected is null, { kind: "pirate", id } or { kind: "ship" }
+  // (the ship of the current player).
   return { tiles, players, pirates, current: 0, selected: null };
 }
 
@@ -96,4 +98,33 @@ export function movePirate(state, pirate, r, c) {
 
 export function piratesAt(state, r, c) {
   return state.pirates.filter((p) => p.pos.r === r && p.pos.c === c);
+}
+
+export function piratesAboard(state, player) {
+  return piratesAt(state, player.ship.r, player.ship.c).filter(
+    (p) => p.player === player.id,
+  );
+}
+
+// A ship slides one cell sideways along its own shore, staying where it
+// still faces an island tile (columns 2-10). It needs at least one of its
+// pirates aboard to sail.
+export function legalShipMoves(state, player) {
+  if (piratesAboard(state, player).length === 0) return [];
+  const moves = [];
+  for (const dc of [-1, 1]) {
+    const c = player.ship.c + dc;
+    if (c >= 2 && c <= 10) moves.push({ r: player.ship.r, c });
+  }
+  return moves;
+}
+
+// Move a ship along the shore, carrying everyone aboard. Ends the turn.
+export function moveShip(state, player, r, c) {
+  for (const p of piratesAboard(state, player)) {
+    p.pos = { r, c };
+  }
+  player.ship = { r, c };
+  state.selected = null;
+  state.current = state.current === 0 ? 1 : 0;
 }

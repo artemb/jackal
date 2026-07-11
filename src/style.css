@@ -142,6 +142,11 @@ body {
   background: radial-gradient(circle at 50% 40%, var(--p2), #17204f);
 }
 
+.ship.selected {
+  outline: 3px solid #ffd75e;
+  outline-offset: -3px;
+}
+
 .pirates {
   position: absolute;
   inset: 0;
