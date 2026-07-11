@@ -77,14 +77,28 @@ disagree, one of them is a bug — decide which and fix it.
 - **A4.** If the arrow has a single direction the extra move is automatic;
   with several directions the moving player chooses one.
 - **A5.** Arrow moves chain: landing on another arrow forces another move.
-  If a chain re-enters an arrow tile already visited this turn, the pirate
-  is thrown back aboard its own ship.
-- **A6.** If an arrow points into the sea or onto the enemy ship, taking it
-  returns the pirate to its own ship; a carried coin is lost. An arrow
-  pointing at the pirate's own ship boards it normally (a carried coin is
-  stashed as per C8).
+  If a chain re-enters an arrow tile already visited this turn (a loop),
+  the pirate dies (O6).
+- **A6.** An arrow pointing into the sea throws the pirate overboard into
+  that cell (O1); a carried coin sinks. An arrow pointing at the enemy
+  ship kills the pirate (O4). An arrow pointing at the pirate's own ship
+  boards it normally (a carried coin is stashed as per C8).
 - **A7.** Forced arrow moves ignore the carrying restriction C6: they may
   flip face-down tiles, and the carried coin travels along.
+
+## O. Overboard and death
+
+- **O1.** A pirate thrown into the sea is overboard, swimming in that
+  sea cell. Swimmers never carry coins (the coin sinks, A6).
+- **O2.** An overboard pirate moves one step in any of the 8 directions to
+  an adjacent sea cell, or climbs aboard its own ship. It can never climb
+  onto the island.
+- **O3.** Swimming spends the turn like a normal move.
+- **O4.** A swimmer that boards the enemy ship dies. An enemy ship that
+  sails into a swimmer's cell kills it.
+- **O5.** A ship that sails into its own swimmer's cell picks it up: the
+  pirate is aboard again.
+- **O6.** A dead pirate is removed from the game permanently.
 
 ## D. Slow tiles
 

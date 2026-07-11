@@ -327,7 +327,7 @@ describe("A. Arrows", () => {
     expect(s.current).toBe(1);
   });
 
-  it("A5: arrows chain, and a loop throws the pirate back to its ship", () => {
+  it("A5: arrows chain, and a loop kills the pirate", () => {
     const s = blankGame();
     setArrow(s, 11, 6, [N]);
     setArrow(s, 10, 6, [N]);
@@ -341,18 +341,20 @@ describe("A. Arrows", () => {
     setArrow(s2, 10, 6, [S]); // points straight back: a loop
     const q = s2.pirates[0];
     movePirate(s2, q, 11, 6);
-    expect(q.pos).toEqual({ r: 12, c: 6 }); // back aboard
+    expect(q.alive).toBe(false);
+    expect(piratesAt(s2, 11, 6)).toHaveLength(0);
     expect(s2.current).toBe(1);
   });
 
-  it("A6: an arrow into the sea or enemy ship returns the pirate to its ship, coin lost", () => {
+  it("A6: an arrow into the sea throws the pirate overboard, coin sunk; onto the enemy ship kills it", () => {
     const s = blankGame();
     setArrow(s, 11, 5, [S], { open: true }); // points into the sea at (12,5)
     const p = s.pirates[0];
     placePirate(s, p, 10, 5);
     p.carrying = true;
     movePirate(s, p, 11, 5);
-    expect(p.pos).toEqual({ r: 12, c: 6 }); // back aboard the own ship
+    expect(p.pos).toEqual({ r: 12, c: 5 }); // swimming next to the shore
+    expect(p.alive).toBe(true);
     expect(p.carrying).toBe(false);
     expect(s.players[0].gold).toBe(0); // the coin sank, it was not stashed
     expect(s.current).toBe(1);
@@ -362,7 +364,7 @@ describe("A. Arrows", () => {
     const q = s2.pirates[0];
     placePirate(s2, q, 2, 6);
     movePirate(s2, q, 1, 6);
-    expect(q.pos).toEqual({ r: 12, c: 6 });
+    expect(q.alive).toBe(false);
   });
 
   it("A6b: an arrow pointing at the own ship boards it normally (coin stashed)", () => {
@@ -387,6 +389,75 @@ describe("A. Arrows", () => {
     expect(p.pos).toEqual({ r: 5, c: 6 });
     expect(s.tiles.get(key(5, 6)).open).toBe(true);
     expect(p.carrying).toBe(true);
+  });
+});
+
+describe("O. Overboard and death", () => {
+  const S = [1, 0];
+
+  // A red pirate swimming at (12,5), next to its ship at (12,6).
+  function overboardGame() {
+    const s = blankGame();
+    setArrow(s, 11, 5, [S], { open: true });
+    const p = s.pirates[0];
+    placePirate(s, p, 10, 5);
+    movePirate(s, p, 11, 5); // the arrow throws it into the sea
+    s.current = 0;
+    return [s, p];
+  }
+
+  it("O1/O2: a swimmer moves one step between sea cells, never onto the island", () => {
+    const [s, p] = overboardGame();
+    const moves = legalMoves(s, p);
+    expect(has(moves, 12, 4)).toBe(true); // sea
+    expect(has(moves, 12, 6)).toBe(true); // own ship
+    expect(has(moves, 11, 4)).toBe(false); // island
+    expect(has(moves, 11, 5)).toBe(false); // island
+    expect(has(moves, 11, 6)).toBe(false); // island
+    expect(moves).toHaveLength(2);
+  });
+
+  it("O2/O3: climbing back aboard the own ship is a normal turn-spending move", () => {
+    const [s, p] = overboardGame();
+    movePirate(s, p, 12, 6);
+    expect(piratesAboard(s, s.players[0])).toContain(p);
+    expect(s.current).toBe(1);
+  });
+
+  it("O4: boarding the enemy ship kills the swimmer", () => {
+    const s = blankGame();
+    const p = s.pirates[0];
+    p.pos = { r: 0, c: 5 }; // red pirate swimming next to the Blue ship
+    const moves = legalMoves(s, p);
+    expect(has(moves, 0, 6)).toBe(true); // the fatal option is offered
+    movePirate(s, p, 0, 6);
+    expect(p.alive).toBe(false);
+    expect(s.current).toBe(1);
+  });
+
+  it("O4: an enemy ship sailing into a swimmer's cell kills it", () => {
+    const s = blankGame();
+    const b = s.pirates[3];
+    b.pos = { r: 12, c: 5 }; // blue pirate swimming in Red's row
+    moveShip(s, s.players[0], 12, 5);
+    expect(b.alive).toBe(false);
+    expect(piratesAboard(s, s.players[0])).toHaveLength(3);
+  });
+
+  it("O5: a ship sailing into its own swimmer picks it up", () => {
+    const [s, p] = overboardGame(); // red swimmer at (12,5)
+    moveShip(s, s.players[0], 12, 5);
+    expect(p.alive).toBe(true);
+    expect(piratesAboard(s, s.players[0])).toContain(p);
+  });
+
+  it("O6: dead pirates are gone from the board", () => {
+    const s = blankGame();
+    const p = s.pirates[0];
+    p.pos = { r: 0, c: 5 };
+    movePirate(s, p, 0, 6); // fatal boarding
+    expect(piratesAt(s, 0, 6)).not.toContain(p); // only Blue's crew is there
+    expect(legalMoves(s, s.pirates[1])).not.toEqual([]); // game goes on
   });
 });
 

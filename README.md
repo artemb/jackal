@@ -26,8 +26,11 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
 - Arrows: 21 arrow tiles (7 types × 3, randomly rotated) force the pirate
   that lands on them to fly on in one of the arrow's directions — chosen
   by the player when there are several, automatic when there is one, and
-  chaining across further arrows. Arrows into the sea or the enemy ship
-  throw the pirate back aboard its own ship (a carried coin sinks).
+  chaining across further arrows.
+- Overboard and death: an arrow into the sea throws the pirate overboard
+  (a carried coin sinks); a swimmer moves between sea cells or climbs back
+  aboard its own ship. Boarding the enemy ship, being run over by it, or
+  getting caught in an arrow loop kills the pirate for good.
 
 - Slow tiles: 5 jungle (2 turns), 4 desert (3), 1 island (4) and
   1 mountain (5). Crossing takes that many turns — entering counts as the

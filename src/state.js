@@ -108,6 +108,7 @@ export function createGame() {
         id: pirates.length,
         player: player.id,
         pos: { ...player.ship },
+        alive: true,
         carrying: false,
         // turns spent on the current slow tile (0 when not on one)
         progress: 0,
@@ -147,6 +148,22 @@ export function legalMoves(state, pirate) {
     const player = state.players[pirate.player];
     const fr = r + player.forward;
     if (canEnterTile(fr, c)) moves.push({ r: fr, c });
+    return moves;
+  }
+
+  // Overboard: swim one step to adjacent sea cells. That includes the
+  // own ship (climbing back aboard) and the enemy ship (fatal, O4).
+  // A swimmer can never climb onto the island.
+  if (isOverboard(state, pirate)) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+        if (!isIsland(nr, nc)) moves.push({ r: nr, c: nc });
+      }
+    }
     return moves;
   }
 
@@ -197,17 +214,11 @@ function endTurn(state) {
   state.current = state.current === 0 ? 1 : 0;
 }
 
-// Send a pirate back aboard its own ship after an arrow threw it into
-// the sea, onto the enemy ship, or around a loop. A carried coin sinks.
-function returnToShip(state, pirate) {
-  pirate.pos = { ...state.players[pirate.player].ship };
-  pirate.carrying = false;
-  pirate.progress = 0;
-}
-
 // Move a pirate, flipping the destination tile if it is still face down.
 // Returns true if any tile was flipped. Boarding the own ship while
 // carrying a coin stashes it automatically as the player's gold.
+// Moving onto the enemy ship is fatal. Landing in the sea leaves the
+// pirate overboard (a carried coin sinks).
 //
 // Landing on an arrow tile forces an extra move in one of the arrow's
 // directions within the same turn (chaining across further arrows). With
@@ -219,6 +230,12 @@ export function movePirate(state, pirate, r, c) {
 }
 
 function stepPirate(state, pirate, r, c, visited) {
+  if (isEnemyShip(state, pirate.player, r, c)) {
+    kill(state, pirate);
+    endTurn(state);
+    return false;
+  }
+
   const stayed = pirate.pos.r === r && pirate.pos.c === c;
   pirate.pos = { r, c };
   let flipped = false;
@@ -231,11 +248,14 @@ function stepPirate(state, pirate, r, c, visited) {
     state.players[pirate.player].gold += 1;
     pirate.carrying = false;
   }
+  if (isOverboard(state, pirate)) {
+    pirate.carrying = false; // the coin sinks
+  }
 
   if (tile?.type === "arrow") {
     if (visited.has(key(r, c))) {
-      // Arrow loop within one turn: the pirate is thrown overboard.
-      returnToShip(state, pirate);
+      // Arrow loop within one turn: the pirate dies.
+      kill(state, pirate);
       endTurn(state);
       return flipped;
     }
@@ -258,14 +278,10 @@ function stepPirate(state, pirate, r, c, visited) {
   return flipped;
 }
 
-function followArrow(state, pirate, { r, c }, visited) {
-  if (isIsland(r, c) || isOwnShip(state, pirate.player, r, c)) {
-    return stepPirate(state, pirate, r, c, visited);
-  }
-  // The arrow points into the sea or onto the enemy ship.
-  returnToShip(state, pirate);
-  endTurn(state);
-  return false;
+// Arrow targets are always on the board; stepPirate handles every kind
+// of cell (island, sea, either ship).
+function followArrow(state, pirate, target, visited) {
+  return stepPirate(state, pirate, target.r, target.c, visited);
 }
 
 // Resolve a pending multi-direction arrow by picking one of its options.
@@ -281,7 +297,27 @@ export function chooseArrowMove(state, target) {
 }
 
 export function piratesAt(state, r, c) {
-  return state.pirates.filter((p) => p.pos.r === r && p.pos.c === c);
+  return state.pirates.filter(
+    (p) => p.alive && p.pos.r === r && p.pos.c === c,
+  );
+}
+
+function isEnemyShip(state, playerId, r, c) {
+  return state.players.some(
+    (pl) => pl.id !== playerId && pl.ship.r === r && pl.ship.c === c,
+  );
+}
+
+// Overboard: in the sea, neither on the island nor aboard the own ship.
+export function isOverboard(state, pirate) {
+  const { r, c } = pirate.pos;
+  return !isIsland(r, c) && !onShip(state, pirate);
+}
+
+function kill(state, pirate) {
+  pirate.alive = false;
+  pirate.carrying = false;
+  pirate.progress = 0;
 }
 
 export function piratesAboard(state, player) {
@@ -303,11 +339,16 @@ export function legalShipMoves(state, player) {
   return moves;
 }
 
-// Move a ship along the shore, carrying everyone aboard. Ends the turn.
+// Move a ship along the shore, carrying everyone aboard. Enemy pirates
+// swimming in the target cell are run over and die; an own swimmer there
+// simply finds itself back aboard. Ends the turn.
 export function moveShip(state, player, r, c) {
   for (const p of piratesAboard(state, player)) {
     p.pos = { r, c };
   }
   player.ship = { r, c };
+  for (const p of piratesAt(state, r, c)) {
+    if (p.player !== player.id) kill(state, p);
+  }
   endTurn(state);
 }
