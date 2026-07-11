@@ -96,8 +96,8 @@ export function legalMoves(state, pirate) {
 
 // Picking up and dropping coins are free actions (they do not end the
 // turn). A pirate carries at most one coin; the coin travels with the
-// pirate on every subsequent move. Dropping on the own ship banks the
-// coin as the player's gold; dropping on a tile leaves it there.
+// pirate on every subsequent move and is stashed automatically when the
+// pirate boards its own ship. Dropping leaves the coin on the tile.
 export function canPickUp(state, pirate) {
   if (pirate.carrying || onShip(state, pirate)) return false;
   const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
@@ -111,17 +111,15 @@ export function pickUpCoin(state, pirate) {
 }
 
 export function dropCoin(state, pirate) {
-  if (!pirate.carrying) return;
-  if (onShip(state, pirate)) {
-    state.players[pirate.player].gold += 1;
-  } else {
-    state.tiles.get(key(pirate.pos.r, pirate.pos.c)).coins += 1;
-  }
+  if (!pirate.carrying || onShip(state, pirate)) return;
+  state.tiles.get(key(pirate.pos.r, pirate.pos.c)).coins += 1;
   pirate.carrying = false;
 }
 
 // Move a pirate, flipping the destination tile if it is still face down.
-// Returns true if a tile was flipped. Ends the current player's turn.
+// Returns true if a tile was flipped. Boarding the own ship while
+// carrying a coin stashes it automatically as the player's gold.
+// Ends the current player's turn.
 export function movePirate(state, pirate, r, c) {
   pirate.pos = { r, c };
   let flipped = false;
@@ -129,6 +127,10 @@ export function movePirate(state, pirate, r, c) {
   if (tile && !tile.open) {
     tile.open = true;
     flipped = true;
+  }
+  if (pirate.carrying && onShip(state, pirate)) {
+    state.players[pirate.player].gold += 1;
+    pirate.carrying = false;
   }
   state.selected = null;
   state.current = state.current === 0 ? 1 : 0;

@@ -173,10 +173,7 @@ function renderActions() {
 
   if (pirate.carrying) {
     const btn = document.createElement("button");
-    const onShip =
-      state.players[pirate.player].ship.r === pirate.pos.r &&
-      state.players[pirate.player].ship.c === pirate.pos.c;
-    btn.textContent = onShip ? "Stash coin on ship" : "Drop coin";
+    btn.textContent = "Drop coin";
     btn.addEventListener("click", () => {
       dropCoin(state, pirate);
       render();
