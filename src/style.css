@@ -142,6 +142,24 @@ body {
   background: radial-gradient(circle at 50% 40%, var(--p2), #17204f);
 }
 
+.coins {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe08a, #d9a520);
+  border: 1px solid #a87a10;
+  color: #5c3a00;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
 .ship.selected {
   outline: 3px solid #ffd75e;
   outline-offset: -3px;

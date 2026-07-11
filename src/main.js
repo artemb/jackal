@@ -89,6 +89,12 @@ function render() {
         const tile = state.tiles.get(key(r, c));
         cell.classList.add("tile", tile.open ? "open" : "closed");
         if (justFlipped === key(r, c)) cell.classList.add("flipping");
+        if (tile.open && tile.coins > 0) {
+          const coinsEl = document.createElement("div");
+          coinsEl.className = "coins";
+          coinsEl.textContent = tile.coins;
+          cell.appendChild(coinsEl);
+        }
       } else {
         cell.classList.add("sea");
       }

@@ -16,11 +16,17 @@ export function key(r, c) {
   return `${r},${c}`;
 }
 
+// Chance that a freshly generated tile hides coins (1-5 of them).
+const COIN_CHANCE = 0.15;
+
 export function createGame() {
   const tiles = new Map();
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
-      if (isIsland(r, c)) tiles.set(key(r, c), { type: "empty", open: false });
+      if (!isIsland(r, c)) continue;
+      const coins =
+        Math.random() < COIN_CHANCE ? 1 + Math.floor(Math.random() * 5) : 0;
+      tiles.set(key(r, c), { type: "empty", open: false, coins });
     }
   }
 
