@@ -584,6 +584,43 @@ describe("K. Crocodile", () => {
   });
 });
 
+describe("R. Rum", () => {
+  it("R1: every map has 4 rum tiles", () => {
+    const s = createGame();
+    let rum = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "rum") rum++;
+    expect(rum).toBe(4);
+  });
+
+  it("R2: a pirate on rum sits out its player's next turn, then recovers", () => {
+    const s = blankGame();
+    s.tiles.get(key(6, 6)).type = "rum";
+    const [p, q] = s.pirates; // two red pirates
+    placePirate(s, p, 6, 5);
+    placePirate(s, q, 8, 8);
+
+    movePirate(s, p, 6, 6); // red: p drinks the rum
+    movePirate(s, s.pirates[3], 1, 6); // blue moves
+
+    expect(legalMoves(s, p)).toEqual([]); // red again: p is out cold
+    expect(legalMoves(s, q).length).toBeGreaterThan(0); // but q can move
+    movePirate(s, q, 8, 7); // red moves the other pirate
+    movePirate(s, s.pirates[3], 2, 6); // blue moves
+
+    expect(legalMoves(s, p).length).toBeGreaterThan(0); // p is sober again
+  });
+
+  it("R2: arrows can drop a pirate onto the rum", () => {
+    const s = blankGame();
+    setArrow(s, 11, 6, [[-1, 0]]);
+    s.tiles.get(key(10, 6)).type = "rum";
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6); // ship -> arrow -> rum
+    expect(p.pos).toEqual({ r: 10, c: 6 });
+    expect(p.drunk).toBeGreaterThan(0);
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

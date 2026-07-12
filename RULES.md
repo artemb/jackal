@@ -124,6 +124,14 @@ disagree, one of them is a bug — decide which and fix it.
   slow-tile crossing is restored, no arrow re-fires, and a carried coin
   stays with the pirate. The turn is spent.
 
+## R. Rum
+
+- **R1.** Every map has 4 rum tiles.
+- **R2.** A pirate that lands on a rum tile (by any means, including
+  arrows) is knocked out: it cannot move during its player's next turn.
+  The player may still move other pirates or the ship.
+- **R3.** After sitting out that one turn the pirate moves normally again.
+
 ## T. Turns
 
 - **T1.** Red moves first.

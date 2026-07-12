@@ -60,6 +60,9 @@ export const SLOW_TILES = [
 // Crocodile tiles chase the pirate back to where it came from.
 const CROC_COUNT = 4;
 
+// Rum tiles knock the pirate out for its player's next turn.
+const RUM_COUNT = 4;
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -101,6 +104,9 @@ export function createGame() {
   for (let n = 0; n < CROC_COUNT; n++) {
     tiles.get(spots[spot++]).type = "croc";
   }
+  for (let n = 0; n < RUM_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "rum";
+  }
 
   const players = [
     { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
@@ -118,6 +124,9 @@ export function createGame() {
         carrying: false,
         // turns spent on the current slow tile (0 when not on one)
         progress: 0,
+        // rum hangover: counts down one per turn end, blocks the pirate
+        // while positive (so it sits out its player's next turn)
+        drunk: 0,
       });
     }
   }
@@ -144,6 +153,9 @@ function onShip(state, pirate) {
 export function legalMoves(state, pirate) {
   const { r, c } = pirate.pos;
   const moves = [];
+
+  // Sleeping off the rum: the pirate cannot move at all this turn.
+  if (pirate.drunk > 0) return moves;
 
   const canEnterTile = (nr, nc) => {
     if (!isIsland(nr, nc)) return false;
@@ -218,6 +230,9 @@ function endTurn(state) {
   state.selected = null;
   state.pending = null;
   state.current = state.current === 0 ? 1 : 0;
+  for (const p of state.pirates) {
+    if (p.drunk > 0) p.drunk -= 1;
+  }
 }
 
 // Move a pirate, flipping the destination tile if it is still face down.
@@ -290,6 +305,13 @@ function stepPirate(state, pirate, r, c, ctx) {
     state.pending = { pirateId: pirate.id, options, ctx };
     state.selected = { kind: "pirate", id: pirate.id };
     return flipped;
+  }
+
+  if (tile?.type === "rum") {
+    // The barrel is irresistible: this pirate sits out its player's next
+    // turn. drunk=3 survives exactly two turn ends (this one and the
+    // opponent's), leaving it positive during that next turn.
+    pirate.drunk = 3;
   }
 
   // Crossing progress: entering a slow tile is the first turn, stepping

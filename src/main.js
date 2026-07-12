@@ -148,6 +148,13 @@ function render() {
           terrainEl.textContent = "🐊";
           cell.appendChild(terrainEl);
         }
+        if (tile.open && tile.type === "rum") {
+          cell.classList.add("rum");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = "🛢️";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");
@@ -183,6 +190,7 @@ function render() {
           const el = document.createElement("div");
           el.className = `pirate p${p.player + 1}`;
           if (p.carrying) el.classList.add("carrying");
+          if (p.drunk > 0) el.classList.add("drunk");
           if (selectedPirate()?.id === p.id) el.classList.add("selected");
           group.appendChild(el);
         }
@@ -227,6 +235,14 @@ function renderActions() {
   }
   const pirate = selectedPirate();
   if (!pirate || pirate.player !== state.current) return;
+
+  if (pirate.drunk > 0) {
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = "This pirate is sleeping off the rum this turn.";
+    actionsEl.appendChild(hint);
+    return;
+  }
 
   const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
   if (tile?.type === "slow" && pirate.progress < tile.steps) {
