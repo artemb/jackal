@@ -72,6 +72,13 @@ const TRAP_COUNT = 3;
 // Parachute tiles fly the pirate straight back to its ship.
 const CHUTE_COUNT = 2;
 
+// Horse tiles launch the pirate on a chess-knight jump.
+const HORSE_COUNT = 2;
+const KNIGHT_JUMPS = [
+  [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+  [1, -2], [1, 2], [2, -1], [2, 1],
+];
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -124,6 +131,9 @@ export function createGame() {
   }
   for (let n = 0; n < CHUTE_COUNT; n++) {
     tiles.get(spots[spot++]).type = "chute";
+  }
+  for (let n = 0; n < HORSE_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "horse";
   }
 
   const players = [
@@ -326,21 +336,29 @@ function stepPirate(state, pirate, r, c, ctx) {
 
   if (tile?.type === "ice") {
     // Slippery: slide one more cell in the direction the pirate came
-    // from. Island tiles are never on the board edge, so the slide
-    // target is always on the board; stepPirate handles whatever is
-    // there (sea, ships, more ice, anything).
-    return followArrow(state, pirate, { r: r + dr, c: c + dc }, ctx) || flipped;
+    // from, normalized to a single step (a knight jump onto ice slides
+    // diagonally). Island tiles are never on the board edge, so the
+    // slide target is always on the board; stepPirate handles whatever
+    // is there (sea, ships, more ice, anything).
+    const target = { r: r + Math.sign(dr), c: c + Math.sign(dc) };
+    return followArrow(state, pirate, target, ctx) || flipped;
   }
 
-  if (tile?.type === "arrow") {
+  if (tile?.type === "arrow" || tile?.type === "horse") {
     if (ctx.visited.has(key(r, c))) {
-      // Arrow loop within one turn: the pirate dies.
+      // A loop within one turn: the pirate dies.
       kill(state, pirate);
       endTurn(state);
       return flipped;
     }
     ctx.visited.add(key(r, c));
-    const options = tile.dirs.map(([dr, dc]) => ({ r: r + dr, c: c + dc }));
+    // The horse jumps like a chess knight (any on-board landing cell);
+    // an arrow flies in one of its directions. Both are forced moves:
+    // automatic with a single option, the player's choice otherwise.
+    const jumps = tile.type === "horse" ? KNIGHT_JUMPS : tile.dirs;
+    const options = jumps
+      .map(([dr, dc]) => ({ r: r + dr, c: c + dc }))
+      .filter((o) => o.r >= 0 && o.r < SIZE && o.c >= 0 && o.c < SIZE);
     if (options.length === 1) {
       return followArrow(state, pirate, options[0], ctx) || flipped;
     }

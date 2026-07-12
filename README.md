@@ -38,6 +38,18 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
   crossing is done.
 - Crocodiles: 4 tiles that chase the pirate straight back to where its
   turn began, spending the turn.
+- Rum: 4 tiles that knock the landing pirate out for its player's next
+  turn (other pirates and the ship can still move).
+- Fighting: moving onto enemy pirates sends them all back aboard their
+  ship; a beaten pirate drops its carried coin where it stood.
+- Ice: 6 slippery tiles that slide the pirate one more cell in the
+  direction it entered, chaining across other special tiles.
+- Traps: 3 tiles that hold a lone pirate until an ally steps onto the
+  same tile, freeing both.
+- Parachutes: 2 tiles that fly the pirate straight back aboard its ship
+  (stashing a carried coin as gold).
+- Horses: 2 tiles that launch the pirate on a chess-knight jump of the
+  player's choice.
 
 The full rule set lives in [RULES.md](RULES.md) — tests are written
 against those numbered rules.

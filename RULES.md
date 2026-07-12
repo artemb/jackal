@@ -171,6 +171,18 @@ disagree, one of them is a bug — decide which and fix it.
   straight back aboard its own ship; a carried coin is stashed as gold
   (C8). The tile is revealed and the turn is spent.
 
+## H. Horse
+
+- **H1.** Every map has 2 horse tiles.
+- **H2.** A pirate that lands on a horse immediately jumps like a chess
+  knight (two cells one way, one cell orthogonally), as a forced move
+  within the same turn. Every on-board landing cell is offered (island,
+  sea = overboard, own ship = boards, enemy ship = fatal); the player
+  chooses. Jumps chain like arrows, and re-entering a horse or arrow tile
+  already visited this turn kills the pirate (A5).
+- **H3.** A knight jump onto ice slides one further cell in the jump's
+  direction, normalized to a single (diagonal) step (I2).
+
 ## T. Turns
 
 - **T1.** Red moves first.

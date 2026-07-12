@@ -176,6 +176,13 @@ function render() {
           terrainEl.textContent = "🪂";
           cell.appendChild(terrainEl);
         }
+        if (tile.open && tile.type === "horse") {
+          cell.classList.add("horse");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = "🐎";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");

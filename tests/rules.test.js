@@ -860,6 +860,66 @@ describe("P. Parachute", () => {
   });
 });
 
+describe("H. Horse", () => {
+  const setHorse = (state, r, c) => {
+    state.tiles.get(key(r, c)).type = "horse";
+  };
+
+  it("H1: every map has 2 horse tiles", () => {
+    const s = createGame();
+    let horses = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "horse") horses++;
+    expect(horses).toBe(2);
+  });
+
+  it("H2: landing on a horse offers all on-board knight jumps", () => {
+    const s = blankGame();
+    setHorse(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6);
+    expect(s.pending.options).toHaveLength(8); // full knight star mid-board
+    expect(s.current).toBe(0); // waiting for the choice
+
+    chooseArrowMove(s, { r: 4, c: 5 });
+    expect(p.pos).toEqual({ r: 4, c: 5 });
+    expect(s.tiles.get(key(4, 5)).open).toBe(true); // the jump flips tiles
+    expect(s.current).toBe(1);
+  });
+
+  it("H2: off-board jumps are not offered near the edge", () => {
+    const s = blankGame();
+    setHorse(s, 1, 2);
+    const p = s.pirates[0];
+    placePirate(s, p, 2, 2);
+    movePirate(s, p, 1, 2);
+    for (const o of s.pending.options) {
+      expect(o.r >= 0 && o.c >= 0).toBe(true);
+    }
+    expect(s.pending.options).toHaveLength(6); // two jumps leave the board
+  });
+
+  it("H2: a knight jump into the sea goes overboard, onto ice slides diagonally", () => {
+    const s = blankGame();
+    setHorse(s, 2, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 3, 6);
+    movePirate(s, p, 2, 6);
+    chooseArrowMove(s, { r: 0, c: 5 }); // into the sea ring
+    expect(p.pos).toEqual({ r: 0, c: 5 });
+    expect(p.alive).toBe(true); // swimming
+
+    const s2 = blankGame();
+    setHorse(s2, 6, 6);
+    s2.tiles.get(key(4, 7)).type = "ice";
+    const q = s2.pirates[0];
+    placePirate(s2, q, 6, 5);
+    movePirate(s2, q, 6, 6);
+    chooseArrowMove(s2, { r: 4, c: 7 }); // knight jump onto the ice
+    expect(q.pos).toEqual({ r: 3, c: 8 }); // slid one diagonal step onward
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();
