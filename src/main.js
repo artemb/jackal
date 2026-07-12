@@ -192,6 +192,11 @@ function seatCard(crew, editable) {
     none.value = "";
     none.textContent = "— unassigned —";
     sel.appendChild(none);
+    const bot = document.createElement("option");
+    bot.value = BOT;
+    bot.textContent = "🤖 Computer";
+    if (seatPid === BOT) bot.selected = true;
+    sel.appendChild(bot);
     for (const p of room.players) {
       const opt = document.createElement("option");
       opt.value = p.id;
@@ -204,12 +209,19 @@ function seatCard(crew, editable) {
     });
     card.appendChild(sel);
   } else {
-    const holder = room.players.find((p) => p.id === seatPid);
     const label = document.createElement("span");
-    label.textContent = holder ? holder.name : "— unassigned —";
+    label.textContent = seatHolderName(seatPid);
     card.appendChild(label);
   }
   return card;
+}
+
+const BOT = "__bot__";
+
+function seatHolderName(seatPid) {
+  if (seatPid === BOT) return "🤖 Computer";
+  const holder = room.players.find((p) => p.id === seatPid);
+  return holder ? holder.name : "— unassigned —";
 }
 
 function renderSeats(container, editable) {
@@ -527,11 +539,7 @@ function renderStatus() {
   if (game.winner !== null) {
     const crews = game.players.filter((p) => p.team === game.winner);
     const controllers = [
-      ...new Set(
-        crews
-          .map((c) => room.players.find((p) => p.id === room.seats[c.id])?.name)
-          .filter(Boolean),
-      ),
+      ...new Set(crews.map((c) => seatHolderName(room.seats[c.id]))),
     ];
     turnEl.innerHTML = "";
     for (const c of crews) {
@@ -552,16 +560,16 @@ function renderStatus() {
   }
 
   const crew = game.players[game.current];
-  const controller = room.players.find((p) => p.id === room.seats[crew.id]);
   turnEl.innerHTML = "";
   const dot = document.createElement("span");
   dot.className = "dot";
   dot.style.background = `var(--p${crew.id + 1})`;
   turnEl.appendChild(dot);
-  const who = controller ? ` — ${controller.name}` : "";
   turnEl.appendChild(
     document.createTextNode(
-      `${crew.name}'s turn${who}${myTurn() ? " (you)" : ""}`,
+      `${crew.name}'s turn — ${seatHolderName(room.seats[crew.id])}${
+        myTurn() ? " (you)" : ""
+      }`,
     ),
   );
 

@@ -98,6 +98,14 @@ host can hand their crew to another player mid-game from the sidebar —
 alliances stay as they were at the start. The first team to bank more
 gold than any rival can still reach wins on the spot.
 
+Any crew can be given to the computer: pick "🤖 Computer" in the seat
+dropdown. The bot runs on the server and plays a heuristic strategy —
+it simulates each candidate move on a masked copy of the board (it
+cannot peek under face-down tiles), resolves arrow/ice/cannon chains,
+and scores the outcome: banking and chasing coins, exploring, fighting,
+avoiding revealed hazards, freeing trapped crewmates and reviving the
+dead. Each bot crew plays for itself (bots are never allied).
+
 ## Planned next
 
 - More tile types (traps, rum, crocodile, …).

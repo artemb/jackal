@@ -20,9 +20,50 @@ import {
   canRevive,
   revivePirate,
 } from "../src/state.js";
+import { chooseBotAction, chooseBotChoice } from "../src/bot.js";
 
 const PORT = process.env.PORT ?? 4174;
 const rooms = new Map();
+
+// Seats can be given to the computer. Every bot seat is its own team.
+export const BOT = "__bot__";
+const BOT_DELAY = 900;
+
+function maybeBotTurn(room) {
+  const s = room.game;
+  if (!s || s.winner !== null) return;
+  if (room.seats[s.current] !== BOT) return;
+  if (room.botTimer) return;
+  room.botTimer = setTimeout(() => {
+    room.botTimer = null;
+    const g = room.game;
+    if (!g || g.winner !== null || room.seats[g.current] !== BOT) return;
+    try {
+      if (g.pending) {
+        chooseArrowMove(g, chooseBotChoice(g, g.current));
+      } else {
+        const pick = chooseBotAction(g, g.current);
+        if (!pick) return; // nothing possible; endTurn skipping prevents this
+        const pirate =
+          pick.action.pirateId != null ? g.pirates[pick.action.pirateId] : null;
+        if (pick.pre === "pickup") pickUpCoin(g, pirate);
+        if (pick.pre === "drop") dropCoin(g, pirate);
+        if (pick.action.kind === "move") {
+          movePirate(g, pirate, pick.action.r, pick.action.c);
+        } else if (pick.action.kind === "ship") {
+          moveShip(g, g.players[g.current], pick.action.r, pick.action.c);
+        } else if (pick.action.kind === "revive") {
+          revivePirate(g, pirate);
+        }
+      }
+    } catch (e) {
+      console.error("bot turn failed:", e);
+      return;
+    }
+    broadcastGame(room);
+    maybeBotTurn(room); // chains through bot pendings and successive bots
+  }, BOT_DELAY);
+}
 
 function newRoomId() {
   return crypto.randomBytes(3).toString("hex").toUpperCase();
@@ -172,12 +213,19 @@ function handleMessage(ws, msg) {
       if (ws.pid !== room.host) return send(ws, { t: "error", msg: "Only the host assigns seats" });
       const seat = msg.crew;
       if (!(seat >= 0 && seat < 4)) return;
-      if (msg.playerId !== null && !room.players.has(msg.playerId)) return;
+      if (
+        msg.playerId !== null &&
+        msg.playerId !== BOT &&
+        !room.players.has(msg.playerId)
+      ) {
+        return;
+      }
       if (room.game && msg.playerId === null) {
         return send(ws, { t: "error", msg: "A started game needs every crew driven" });
       }
       room.seats[seat] = msg.playerId;
       broadcastRoom(room);
+      maybeBotTurn(room); // in case a stuck crew was just handed to the bot
       return;
     }
     case "start": {
@@ -187,17 +235,23 @@ function handleMessage(ws, msg) {
         return send(ws, { t: "error", msg: "Assign all four crews first" });
       }
       // Crews controlled by the same player are allies: team = controller.
-      const controllers = [...new Set(room.seats)];
-      const teams = room.seats.map((pid) => controllers.indexOf(pid));
+      // Every bot seat is its own controller (bots are never allied).
+      const controllers = room.seats.map((pid, i) =>
+        pid === BOT ? `${BOT}${i}` : pid,
+      );
+      const uniq = [...new Set(controllers)];
+      const teams = controllers.map((c) => uniq.indexOf(c));
       room.game = createGame({ teams });
       broadcastRoom(room);
       broadcastGame(room);
+      maybeBotTurn(room);
       return;
     }
     case "action": {
       const err = applyAction(room, ws.pid, msg.a ?? {});
       if (err) return send(ws, { t: "error", msg: err });
       broadcastGame(room);
+      maybeBotTurn(room);
       return;
     }
   }
