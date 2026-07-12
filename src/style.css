@@ -182,6 +182,16 @@ body {
   border-color: #918776;
 }
 
+.cell.tile.plane.open {
+  background: #cddcec;
+  border-color: #98b4cd;
+}
+
+.terrain.spent {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
 .cell.tile.slow.open.jungle {
   background: #a4c17e;
   border-color: #7d9c5b;

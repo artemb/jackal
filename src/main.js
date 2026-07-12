@@ -199,6 +199,14 @@ function render() {
           terrainEl.textContent = tile.type === "native" ? "💃" : "🏰";
           cell.appendChild(terrainEl);
         }
+        if (tile.open && tile.type === "plane") {
+          cell.classList.add("plane");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          if (tile.used) terrainEl.classList.add("spent");
+          terrainEl.textContent = "✈️";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "cannon") {
           cell.classList.add("cannon");
           const terrainEl = document.createElement("div");

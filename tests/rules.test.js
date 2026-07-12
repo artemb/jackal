@@ -1074,6 +1074,69 @@ describe("W. Cannons", () => {
   });
 });
 
+describe("J. Aeroplane", () => {
+  const setPlane = (state, r, c) => {
+    const tile = state.tiles.get(key(r, c));
+    tile.type = "plane";
+    tile.used = false;
+    tile.open = true;
+  };
+
+  it("J1: every map has exactly 1 aeroplane tile", () => {
+    const s = createGame();
+    let n = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "plane") n++;
+    expect(n).toBe(1);
+  });
+
+  it("J2: from the plane the next move may go anywhere on the board", () => {
+    const s = blankGame();
+    setPlane(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 6);
+    const moves = legalMoves(s, p);
+    expect(has(moves, 2, 9)).toBe(true); // a far, face-down tile
+    expect(has(moves, 0, 0)).toBe(true); // sea in the far corner
+    expect(has(moves, 12, 6)).toBe(true); // the own ship
+
+    movePirate(s, p, 2, 9); // fly
+    expect(p.pos).toEqual({ r: 2, c: 9 });
+    expect(s.tiles.get(key(2, 9)).open).toBe(true); // landing flips it
+    expect(s.tiles.get(key(6, 6)).used).toBe(true); // one use only
+  });
+
+  it("J2: a used plane offers no flights to the next visitor", () => {
+    const s = blankGame();
+    setPlane(s, 6, 6);
+    s.tiles.get(key(6, 6)).used = true;
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 6);
+    expect(legalMoves(s, p)).toHaveLength(8); // plain walking range
+  });
+
+  it("J3: an adjacent step does not consume the plane", () => {
+    const s = blankGame();
+    setPlane(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 6);
+    s.tiles.get(key(6, 5)).open = true;
+    movePirate(s, p, 6, 5); // just walks off
+    expect(s.tiles.get(key(6, 6)).used).toBe(false);
+  });
+
+  it("J4: a carrying pirate may only fly to discovered tiles", () => {
+    const s = blankGame();
+    setPlane(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 6);
+    p.carrying = true;
+    s.tiles.get(key(2, 9)).open = true;
+    const moves = legalMoves(s, p);
+    expect(has(moves, 2, 9)).toBe(true); // discovered: allowed
+    expect(has(moves, 3, 9)).toBe(false); // face-down: not while carrying
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

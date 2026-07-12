@@ -215,6 +215,17 @@ disagree, one of them is a bug — decide which and fix it.
   arrives at the first non-island cell — the sea (overboard, O1), its own
   ship (boards, stashing a coin) or the enemy ship (fatal, O4).
 
+## J. Aeroplane
+
+- **J1.** Every map has exactly 1 aeroplane tile.
+- **J2.** A pirate standing on the plane may make its next move from that
+  tile to anywhere on the board: island tiles (under the usual entry
+  rules, including C6 while carrying and G2 fortress protection), any sea
+  cell (going overboard on purpose), its own ship or the enemy ship
+  (fatal, O4). The landing has all its normal consequences.
+- **J3.** The plane is one-use: a flight beyond walking range spends it
+  for the rest of the game. A plain adjacent step off the tile does not.
+
 ## T. Turns
 
 - **T1.** Red moves first.

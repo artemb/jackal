@@ -84,6 +84,10 @@ const NATIVE_COUNT = 1;
 // direction they face (fixed randomly when the map is generated).
 const CANNON_COUNT = 2;
 
+// The aeroplane lets the pirate's next move from the tile go anywhere
+// on the board. One use per plane, and there is one plane.
+const PLANE_COUNT = 1;
+
 // Horse tiles launch the pirate on a chess-knight jump.
 const HORSE_COUNT = 2;
 const KNIGHT_JUMPS = [
@@ -160,6 +164,11 @@ export function createGame() {
     const tile = tiles.get(spots[spot++]);
     tile.type = "cannon";
     tile.dir = rotateDir(N, Math.floor(Math.random() * 4));
+  }
+  for (let n = 0; n < PLANE_COUNT; n++) {
+    const tile = tiles.get(spots[spot++]);
+    tile.type = "plane";
+    tile.used = false;
   }
 
   const players = [
@@ -251,6 +260,21 @@ export function legalMoves(state, pirate) {
     return [{ r, c }];
   }
 
+  // Standing on an unused aeroplane: the next move may go anywhere on
+  // the board (island under the usual entry rules, any sea cell, either
+  // ship). Adjacent steps stay possible without spending the plane.
+  if (here?.type === "plane" && !here.used) {
+    for (let nr = 0; nr < SIZE; nr++) {
+      for (let nc = 0; nc < SIZE; nc++) {
+        if (nr === r && nc === c) continue;
+        if (isIsland(nr, nc) ? canEnterTile(nr, nc) : true) {
+          moves.push({ r: nr, c: nc });
+        }
+      }
+    }
+    return moves;
+  }
+
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
@@ -330,6 +354,17 @@ function endTurn(state) {
 // state.pending is set and chooseArrowMove must be called. The turn ends
 // once the chain settles.
 export function movePirate(state, pirate, r, c) {
+  // A flight beyond walking range consumes the aeroplane under the
+  // pirate; a plain adjacent step leaves it available.
+  const from = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  if (
+    from?.type === "plane" &&
+    !from.used &&
+    Math.max(Math.abs(r - pirate.pos.r), Math.abs(c - pirate.pos.c)) > 1
+  ) {
+    from.used = true;
+  }
+
   // ctx follows the whole move, including arrow chains: origin is where
   // the pirate stood when the turn began (the crocodile sends it back
   // there), visited guards against arrow loops.
