@@ -415,7 +415,7 @@ function shipAt(r, c) {
 // Mouse-over rule hints, one per tile kind.
 const TILE_HINTS = {
   empty: "Empty ground.",
-  croc: "Crocodile — chases the pirate back to where its turn began.",
+  croc: "Crocodile — chases the pirate back to the cell it came from; from a horse or multi-arrow you then pick a different destination.",
   rum: "Rum barrel — the pirate sleeps through its player's next turn.",
   ice: "Ice — the pirate slides one more cell in the direction it entered.",
   trap: "Trap — a lone pirate is stuck here until an ally steps in; that frees both.",

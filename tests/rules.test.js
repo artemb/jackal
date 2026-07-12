@@ -568,14 +568,35 @@ describe("K. Crocodile", () => {
     expect(s.current).not.toBe(0); // the turn is still spent
   });
 
-  it("K2: an arrow chain into a crocodile returns the pirate to where the turn began", () => {
+  it("K2: the crocodile chases the pirate one chain step back", () => {
     const s = blankGame();
     setArrow(s, 11, 6, [[-1, 0]]);
     setCroc(s, 10, 6);
     const p = s.pirates[0];
     movePirate(s, p, 11, 6); // ship -> arrow -> crocodile
-    expect(p.pos).toEqual({ r: 12, c: 6 }); // not stranded on the arrow
+    // back on the single-direction arrow tile, which does not re-fire
+    expect(p.pos).toEqual({ r: 11, c: 6 });
     expect(s.pending).toBe(null);
+    expect(s.current).not.toBe(0);
+  });
+
+  it("K3: bounced back onto a horse, the pirate picks a new jump (croc excluded)", () => {
+    const s = blankGame();
+    s.tiles.get(key(6, 6)).type = "horse";
+    setCroc(s, 4, 5);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6); // horse: choose a jump
+    expect(s.pending).not.toBe(null);
+    chooseArrowMove(s, { r: 4, c: 5 }); // jump onto the crocodile
+    expect(p.pos).toEqual({ r: 6, c: 6 }); // chased back to the horse
+    expect(s.pending).not.toBe(null); // and the choice re-opens
+    expect(s.pending.options).toHaveLength(7); // all jumps minus the croc
+    expect(has(s.pending.options, 4, 5)).toBe(false);
+    expect(s.current).toBe(0); // still this crew's move
+
+    chooseArrowMove(s, { r: 8, c: 7 }); // pick a different jump
+    expect(p.pos).toEqual({ r: 8, c: 7 });
     expect(s.current).not.toBe(0);
   });
 
@@ -768,7 +789,8 @@ describe("I. Ice", () => {
     const q = s2.pirates[0];
     placePirate(s2, q, 6, 5);
     movePirate(s2, q, 6, 6); // ice slides into the crocodile
-    expect(q.pos).toEqual({ r: 6, c: 5 }); // chased back to the turn origin
+    expect(q.pos).toEqual({ r: 6, c: 6 }); // chased back onto the ice, which
+    expect(s2.pending).toBe(null); // does not slide again (K2)
   });
 
   it("I2: an arrow can push a pirate across ice", () => {

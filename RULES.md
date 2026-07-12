@@ -133,11 +133,16 @@ disagree, one of them is a bug — decide which and fix it.
 
 - **K1.** Every map has 4 crocodile tiles.
 - **K2.** A pirate that lands on a crocodile (by a normal move or through
-  an arrow chain) flips the tile, then is chased back to the cell it
-  occupied when the turn began — never left stranded mid-chain on an
-  arrow. The return does not re-trigger that cell's effect: a finished
-  slow-tile crossing is restored, no arrow re-fires, and a carried coin
-  stays with the pirate. The turn is spent.
+  a forced chain) flips the tile, then is chased back to the cell it
+  came from — one chain step back. A carried coin stays with the pirate,
+  and a slow tile's finished crossing is restored. The cell does not
+  re-trigger: a single-direction arrow or ice does not fire again (the
+  pirate simply rests there) — except as per K3. The turn is spent once
+  the pirate settles.
+- **K3.** If the cell the pirate is chased back to is a choice tile
+  (horse or multi-direction arrow), the choice opens again with the
+  crocodile's cell excluded, and the pirate continues from there within
+  the same turn.
 
 ## F. Fighting
 

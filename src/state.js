@@ -460,11 +460,11 @@ export function movePirate(state, pirate, r, c) {
     from.used = true;
   }
 
-  // ctx follows the whole move, including arrow chains: origin is where
-  // the pirate stood when the turn began (the crocodile sends it back
-  // there), visited guards against arrow loops.
+  // ctx follows the whole move, including arrow chains: prev is the
+  // cell the pirate last stood on (the crocodile chases it back there),
+  // visited guards against arrow loops.
   const ctx = {
-    origin: { pos: { ...pirate.pos }, progress: pirate.progress },
+    prev: { pos: { ...pirate.pos }, progress: pirate.progress },
     visited: new Set(),
   };
   return stepPirate(state, pirate, r, c, ctx);
@@ -491,6 +491,9 @@ function stepPirate(state, pirate, r, c, ctx) {
   const dc = c - pirate.pos.c;
   const stayed = dr === 0 && dc === 0;
 
+  // Remember the cell this step leaves, for the crocodile.
+  ctx.prev = { pos: { ...pirate.pos }, progress: pirate.progress };
+
   // Fight: every enemy pirate standing on the destination retreats to
   // its own ship before the attacker settles in.
   for (const foe of piratesAt(state, r, c)) {
@@ -514,11 +517,34 @@ function stepPirate(state, pirate, r, c, ctx) {
   }
 
   if (tile?.type === "croc") {
-    // The crocodile chases the pirate back to where its turn started,
-    // without re-triggering that cell's effect. Crossing progress on a
-    // slow tile it had left is restored.
-    pirate.pos = { ...ctx.origin.pos };
-    pirate.progress = ctx.origin.progress;
+    // The crocodile chases the pirate back to the cell it just came
+    // from. A choice tile there (horse, multi-direction arrow) offers
+    // its choice again — minus the crocodile; anything else does not
+    // re-trigger (crossing progress on a slow tile is restored).
+    const back = ctx.prev;
+    pirate.pos = { ...back.pos };
+    pirate.progress = back.progress;
+    const backTile = state.tiles.get(key(back.pos.r, back.pos.c));
+    const jumps =
+      backTile?.type === "horse"
+        ? KNIGHT_JUMPS
+        : backTile?.type === "arrow" && backTile.dirs.length > 1
+          ? backTile.dirs
+          : null;
+    if (jumps) {
+      const options = jumps
+        .map(([jr, jc]) => ({ r: back.pos.r + jr, c: back.pos.c + jc }))
+        .filter((o) => o.r >= 0 && o.r < SIZE && o.c >= 0 && o.c < SIZE)
+        .filter((o) => !(o.r === r && o.c === c));
+      if (options.length === 1) {
+        return followArrow(state, pirate, options[0], ctx) || flipped;
+      }
+      if (options.length > 1) {
+        state.pending = { pirateId: pirate.id, options, ctx };
+        state.selected = { kind: "pirate", id: pirate.id };
+        return flipped;
+      }
+    }
     autoPickUp(state, pirate);
     endTurn(state);
     return flipped;
@@ -659,7 +685,7 @@ export function serializeGame(state) {
           pirateId: state.pending.pirateId,
           options: state.pending.options,
           ctx: {
-            origin: state.pending.ctx.origin,
+            prev: state.pending.ctx.prev,
             visited: [...state.pending.ctx.visited],
           },
         }
@@ -681,7 +707,7 @@ export function deserializeGame(data) {
           pirateId: data.pending.pirateId,
           options: data.pending.options,
           ctx: {
-            origin: data.pending.ctx.origin,
+            prev: data.pending.ctx.prev,
             visited: new Set(data.pending.ctx.visited),
           },
         }
