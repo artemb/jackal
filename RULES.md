@@ -13,14 +13,26 @@ disagree, one of them is a bug — decide which and fix it.
 - **B4.** A face-down tile is flipped open (discovered) the first time a
   pirate moves onto it. Tiles never flip back.
 
+## Q. Crews and teams
+
+- **Q1.** There are always four crews with a ship each: Red (bottom),
+  Blue (top), Green (left) and Yellow (right), each starting at the
+  middle of its side with three pirates aboard.
+- **Q2.** Each crew belongs to a team. Crews on the same team are allies:
+  they never fight each other, share cells and fortresses, may board each
+  other's ships (all "own ship" rules mean any friendly ship), free each
+  other from traps, and revive each other's dead. With two players each
+  controls two crews on opposite sides; with three, one player controls
+  two opposite crews; with four, one crew each.
+- **Q3.** Crews take turns in fixed order (Red, Blue, Green, Yellow).
+  A crew with no possible turn-spending action is skipped.
+
 ## S. Ships
 
-- **S1.** There are two ships on opposite sides of the island: Red on the
-  bottom sea row, Blue on the top sea row, both starting at the middle
-  column (column 6).
-- **S2.** A ship may move one cell sideways along its own sea row, only to
-  columns 2–10 (so it always faces an island tile).
-- **S3.** A ship may only move if at least one of its own pirates is aboard.
+- **S1.** Four ships, one per side of the island (Q1).
+- **S2.** A ship may move one cell sideways along its own shore, only to
+  positions 2–10 along that side (so it always faces an island tile).
+- **S3.** A ship may only move if at least one friendly pirate is aboard.
 - **S4.** When a ship moves, every pirate aboard moves with it.
 - **S5.** Moving a ship spends the player's turn.
 - **S6.** Ships never leave their own sea row.
@@ -229,7 +241,7 @@ disagree, one of them is a bug — decide which and fix it.
 ## T. Turns
 
 - **T1.** Red moves first.
-- **T2.** Players alternate turns; exactly one turn-spending action (move a
-  pirate or move the ship) per turn.
+- **T2.** Crews take turns in order (Q3); exactly one turn-spending action
+  (move a pirate, move the ship, or revive) per turn.
 - **T3.** Free actions (pick up, drop) may be taken any number of times
   during the owner's turn and do not end it.

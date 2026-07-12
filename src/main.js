@@ -273,7 +273,7 @@ function render() {
   turnEl.innerHTML = "";
   const dot = document.createElement("span");
   dot.className = "dot";
-  dot.style.background = player.id === 0 ? "var(--p1)" : "var(--p2)";
+  dot.style.background = `var(--p${player.id + 1})`;
   turnEl.appendChild(dot);
   turnEl.appendChild(document.createTextNode(`${player.name}'s turn`));
 

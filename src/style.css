@@ -13,6 +13,8 @@
   --tile-open-edge: #c9a86a;
   --p1: #d64541;
   --p2: #2c3e8f;
+  --p3: #2e7d4f;
+  --p4: #c8971b;
 }
 
 body {
@@ -279,6 +281,14 @@ body {
   background: radial-gradient(circle at 50% 40%, var(--p2), #17204f);
 }
 
+.ship.p3 {
+  background: radial-gradient(circle at 50% 40%, var(--p3), #174028);
+}
+
+.ship.p4 {
+  background: radial-gradient(circle at 50% 40%, var(--p4), #6e5209);
+}
+
 .coins {
   position: absolute;
   top: 1px;
@@ -323,6 +333,14 @@ body {
 
 .pirate.p2 {
   background: var(--p2);
+}
+
+.pirate.p3 {
+  background: var(--p3);
+}
+
+.pirate.p4 {
+  background: var(--p4);
 }
 
 .pirate.selected {

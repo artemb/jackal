@@ -662,11 +662,16 @@ describe("R. Rum", () => {
 
     movePirate(s, p, 6, 6); // red: p drinks the rum
     movePirate(s, s.pirates[3], 1, 6); // blue moves
+    movePirate(s, s.pirates[6], 6, 1); // green moves
+    movePirate(s, s.pirates[9], 6, 11); // yellow moves
 
-    expect(legalMoves(s, p)).toEqual([]); // red again: p is out cold
+    expect(s.current).toBe(0); // red again
+    expect(legalMoves(s, p)).toEqual([]); // p is out cold
     expect(legalMoves(s, q).length).toBeGreaterThan(0); // but q can move
     movePirate(s, q, 8, 7); // red moves the other pirate
-    movePirate(s, s.pirates[3], 2, 6); // blue moves
+    movePirate(s, s.pirates[3], 2, 6); // blue
+    movePirate(s, s.pirates[6], 6, 2); // green
+    movePirate(s, s.pirates[9], 6, 10); // yellow
 
     expect(legalMoves(s, p).length).toBeGreaterThan(0); // p is sober again
   });
@@ -1137,6 +1142,60 @@ describe("J. Aeroplane", () => {
   });
 });
 
+describe("Q. Crews and teams", () => {
+  it("Q1: four crews, one ship per side, three pirates each", () => {
+    const s = createGame();
+    expect(s.players).toHaveLength(4);
+    expect(s.players.map((p) => p.ship)).toEqual([
+      { r: 12, c: 6 },
+      { r: 0, c: 6 },
+      { r: 6, c: 0 },
+      { r: 6, c: 12 },
+    ]);
+    expect(s.pirates).toHaveLength(12);
+  });
+
+  it("Q2: side ships sail along their own shore column", () => {
+    const s = blankGame();
+    const green = s.players[2];
+    const moves = legalShipMoves(s, green);
+    expect(moves).toHaveLength(2);
+    expect(has(moves, 5, 0)).toBe(true);
+    expect(has(moves, 7, 0)).toBe(true);
+    moveShip(s, green, 5, 0);
+    expect(s.pirates[6].pos).toEqual({ r: 5, c: 0 }); // crew came along
+  });
+
+  it("Q3: same-team crews are allies: no fights, shared ships", () => {
+    const s = blankGame();
+    // two players, two ships each: Red+Blue vs Green+Yellow
+    s.players[0].team = 0;
+    s.players[1].team = 0;
+    s.players[2].team = 1;
+    s.players[3].team = 1;
+
+    const red = s.pirates[0];
+    const blue = s.pirates[3];
+    placePirate(s, blue, 6, 6);
+    placePirate(s, red, 6, 5);
+    movePirate(s, red, 6, 6);
+    expect(blue.pos).toEqual({ r: 6, c: 6 }); // no fight between allies
+
+    s.current = 0;
+    placePirate(s, red, 1, 6); // next to the allied Blue ship
+    expect(has(legalMoves(s, red), 0, 6)).toBe(true); // may board it
+    movePirate(s, red, 0, 6);
+    expect(red.alive).toBe(true);
+  });
+
+  it("Q4: crews that cannot act are skipped in the turn order", () => {
+    const s = blankGame();
+    for (const p of s.pirates.slice(3, 6)) p.alive = false; // Blue wiped out
+    movePirate(s, s.pirates[0], 11, 6); // Red moves
+    expect(s.current).toBe(2); // Blue is skipped, Green is up
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();
@@ -1144,14 +1203,16 @@ describe("T. Turns", () => {
     expect(s.players[0].name).toBe("Red");
   });
 
-  it("T2: turns alternate on every turn-spending action", () => {
+  it("T2: the turn passes around all four crews on every turn-spending action", () => {
     const s = blankGame();
-    movePirate(s, s.pirates[0], 11, 6);
+    movePirate(s, s.pirates[0], 11, 6); // Red
     expect(s.current).toBe(1);
-    movePirate(s, s.pirates[3], 1, 6);
+    movePirate(s, s.pirates[3], 1, 6); // Blue
+    expect(s.current).toBe(2);
+    movePirate(s, s.pirates[6], 6, 1); // Green
+    expect(s.current).toBe(3);
+    moveShip(s, s.players[3], 5, 12); // Yellow sails
     expect(s.current).toBe(0);
-    moveShip(s, s.players[0], 12, 5);
-    expect(s.current).toBe(1);
   });
 
   it("T3: pick up and drop are free actions", () => {

@@ -103,7 +103,18 @@ function shuffle(arr) {
   return arr;
 }
 
-export function createGame() {
+// The four crews, one ship per side of the island. `forward` points from
+// the ship onto the island. Which crews are allies is decided by the
+// `teams` option: crews with the same team value fight side by side
+// (e.g. teams [0, 0, 1, 1] for a two-player game with two ships each).
+export const CREWS = [
+  { name: "Red", ship: { r: 12, c: 6 }, forward: [-1, 0] },
+  { name: "Blue", ship: { r: 0, c: 6 }, forward: [1, 0] },
+  { name: "Green", ship: { r: 6, c: 0 }, forward: [0, 1] },
+  { name: "Yellow", ship: { r: 6, c: 12 }, forward: [0, -1] },
+];
+
+export function createGame({ teams } = {}) {
   const tiles = new Map();
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
@@ -171,10 +182,14 @@ export function createGame() {
     tile.used = false;
   }
 
-  const players = [
-    { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
-    { id: 1, name: "Blue", ship: { r: 0, c: 6 }, forward: 1, gold: 0 },
-  ];
+  const players = CREWS.map((crew, i) => ({
+    id: i,
+    name: crew.name,
+    ship: { ...crew.ship },
+    forward: crew.forward,
+    gold: 0,
+    team: teams?.[i] ?? i,
+  }));
 
   const pirates = [];
   for (const player of players) {
@@ -202,9 +217,23 @@ export function createGame() {
   return { tiles, players, pirates, current: 0, selected: null, pending: null };
 }
 
+function sameTeam(state, a, b) {
+  return state.players[a.player].team === state.players[b.player].team;
+}
+
+// A friendly (same-team) ship at (r, c), or null.
+function teamShipAt(state, playerId, r, c) {
+  const team = state.players[playerId].team;
+  return (
+    state.players.find(
+      (pl) => pl.team === team && pl.ship.r === r && pl.ship.c === c,
+    ) ?? null
+  );
+}
+
+// "Own ship" everywhere in the rules means any friendly ship.
 function isOwnShip(state, playerId, r, c) {
-  const ship = state.players[playerId].ship;
-  return ship.r === r && ship.c === c;
+  return teamShipAt(state, playerId, r, c) !== null;
 }
 
 function onShip(state, pirate) {
@@ -232,9 +261,10 @@ export function legalMoves(state, pirate) {
   };
 
   if (onShip(state, pirate)) {
-    const player = state.players[pirate.player];
-    const fr = r + player.forward;
-    if (canEnterTile(fr, c)) moves.push({ r: fr, c });
+    // Disembark straight ahead of whichever friendly ship this is.
+    const shipCrew = teamShipAt(state, pirate.player, r, c);
+    const [fr, fc] = shipCrew.forward;
+    if (canEnterTile(r + fr, c + fc)) moves.push({ r: r + fr, c: c + fc });
     return moves;
   }
 
@@ -310,13 +340,13 @@ export function pickUpCoin(state, pirate) {
 export function canRevive(state, pirate) {
   const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
   if (tile?.type !== "native") return false;
-  return state.pirates.some((p) => p.player === pirate.player && !p.alive);
+  return state.pirates.some((p) => sameTeam(state, p, pirate) && !p.alive);
 }
 
 export function revivePirate(state, pirate) {
   if (!canRevive(state, pirate)) return;
   const dead = state.pirates.find(
-    (p) => p.player === pirate.player && !p.alive,
+    (p) => sameTeam(state, p, pirate) && !p.alive,
   );
   dead.alive = true;
   dead.pos = { ...pirate.pos };
@@ -333,12 +363,32 @@ export function dropCoin(state, pirate) {
   pirate.carrying = false;
 }
 
+// Whether a crew has any turn-spending action available: moving a
+// pirate, sailing the ship, or a native-woman revival.
+export function crewCanAct(state, crewId) {
+  if (legalShipMoves(state, state.players[crewId]).length > 0) return true;
+  return state.pirates.some(
+    (p) =>
+      p.alive &&
+      p.player === crewId &&
+      (legalMoves(state, p).length > 0 || canRevive(state, p)),
+  );
+}
+
 function endTurn(state) {
   state.selected = null;
   state.pending = null;
-  state.current = state.current === 0 ? 1 : 0;
   for (const p of state.pirates) {
     if (p.drunk > 0) p.drunk -= 1;
+  }
+  // Pass the turn to the next crew that can actually act; crews that are
+  // wiped out or fully stuck are skipped. If nobody can act, stay put.
+  for (let i = 1; i <= state.players.length; i++) {
+    const next = (state.current + i) % state.players.length;
+    if (crewCanAct(state, next)) {
+      state.current = next;
+      return;
+    }
   }
 }
 
@@ -399,7 +449,7 @@ function stepPirate(state, pirate, r, c, ctx) {
   // Fight: every enemy pirate standing on the destination retreats to
   // its own ship before the attacker settles in.
   for (const foe of piratesAt(state, r, c)) {
-    if (foe.player !== pirate.player) sendHome(state, foe);
+    if (!sameTeam(state, foe, pirate)) sendHome(state, foe);
   }
 
   pirate.pos = { r, c };
@@ -491,7 +541,7 @@ function stepPirate(state, pirate, r, c, ctx) {
     // Alone, the pirate is caught. With an ally already on the tile,
     // nobody is caught and any trapped allies are pulled free.
     const allies = piratesAt(state, r, c).filter(
-      (p) => p.player === pirate.player && p.id !== pirate.id,
+      (p) => sameTeam(state, p, pirate) && p.id !== pirate.id,
     );
     if (allies.length > 0) {
       for (const ally of allies) ally.trapped = false;
@@ -502,9 +552,9 @@ function stepPirate(state, pirate, r, c, ctx) {
 
   if (tile?.type === "rum") {
     // The barrel is irresistible: this pirate sits out its player's next
-    // turn. drunk=3 survives exactly two turn ends (this one and the
-    // opponent's), leaving it positive during that next turn.
-    pirate.drunk = 3;
+    // turn. The hangover survives one full round of turn ends (this
+    // one plus every other crew's), staying positive during that turn.
+    pirate.drunk = state.players.length + 1;
   }
 
   // Crossing progress: entering a slow tile is the first turn, stepping
@@ -541,8 +591,9 @@ export function piratesAt(state, r, c) {
 }
 
 function isEnemyShip(state, playerId, r, c) {
+  const team = state.players[playerId].team;
   return state.players.some(
-    (pl) => pl.id !== playerId && pl.ship.r === r && pl.ship.c === c,
+    (pl) => pl.team !== team && pl.ship.r === r && pl.ship.c === c,
   );
 }
 
@@ -559,7 +610,7 @@ export function isFort(tile) {
 // A fortress with enemy pirates inside cannot be entered or attacked.
 function fortBlocked(state, pirate, r, c) {
   if (!isFort(state.tiles.get(key(r, c)))) return false;
-  return piratesAt(state, r, c).some((p) => p.player !== pirate.player);
+  return piratesAt(state, r, c).some((p) => !sameTeam(state, p, pirate));
 }
 
 function kill(state, pirate) {
@@ -584,33 +635,38 @@ function sendHome(state, pirate) {
 
 export function piratesAboard(state, player) {
   return piratesAt(state, player.ship.r, player.ship.c).filter(
-    (p) => p.player === player.id,
+    (p) => state.players[p.player].team === player.team,
   );
 }
 
 // A ship slides one cell sideways along its own shore, staying where it
-// still faces an island tile (columns 2-10). It needs at least one of its
-// pirates aboard to sail.
+// still faces an island tile (positions 2-10 along its side). It needs
+// at least one friendly pirate aboard to sail.
 export function legalShipMoves(state, player) {
   if (piratesAboard(state, player).length === 0) return [];
   const moves = [];
-  for (const dc of [-1, 1]) {
-    const c = player.ship.c + dc;
-    if (c >= 2 && c <= 10) moves.push({ r: player.ship.r, c });
+  // Ships on the top/bottom shores slide along columns, ships on the
+  // left/right shores along rows.
+  const horizontal = player.forward[1] === 0;
+  for (const d of [-1, 1]) {
+    const r = player.ship.r + (horizontal ? 0 : d);
+    const c = player.ship.c + (horizontal ? d : 0);
+    const along = horizontal ? c : r;
+    if (along >= 2 && along <= 10) moves.push({ r, c });
   }
   return moves;
 }
 
 // Move a ship along the shore, carrying everyone aboard. Enemy pirates
-// swimming in the target cell are run over and die; an own swimmer there
-// simply finds itself back aboard. Ends the turn.
+// swimming in the target cell are run over and die; a friendly swimmer
+// there simply finds itself back aboard. Ends the turn.
 export function moveShip(state, player, r, c) {
   for (const p of piratesAboard(state, player)) {
     p.pos = { r, c };
   }
   player.ship = { r, c };
   for (const p of piratesAt(state, r, c)) {
-    if (p.player !== player.id) kill(state, p);
+    if (state.players[p.player].team !== player.team) kill(state, p);
   }
   endTurn(state);
 }
