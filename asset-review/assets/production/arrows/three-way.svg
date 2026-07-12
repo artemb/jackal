@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <g transform="translate(19 19) scale(.85)">
+    <g transform="rotate(180 128 128)"><path fill="#df4c2d" stroke="#073c42" stroke-width="9" stroke-linejoin="round" d="M128 18 162 58h-19v68h-30V58H94z"/></g>
+    <g transform="rotate(270 128 128)"><path fill="#df4c2d" stroke="#073c42" stroke-width="9" stroke-linejoin="round" d="M128 18 162 58h-19v68h-30V58H94z"/></g>
+    <g transform="rotate(45 128 128)"><path fill="#df4c2d" stroke="#073c42" stroke-width="9" stroke-linejoin="round" d="M128 18 162 58h-19v68h-30V58H94z"/></g>
+  </g>
+</svg>

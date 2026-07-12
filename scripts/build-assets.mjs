@@ -7,6 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(root, "src/assets/source");
 const tileDir = path.join(root, "src/assets/tiles");
 const pieceDir = path.join(root, "src/assets/pieces");
+const arrowDir = path.join(root, "src/assets/arrows");
 const reviewDir = path.join(root, "asset-review/assets/production");
 const tileSize = 512;
 const outputSize = 256;
@@ -17,7 +18,7 @@ const atlases = {
   c: path.join(sourceDir, "tiles-c.png"),
 };
 
-async function writeTile(atlas, column, row, name, clearLowerArea = false) {
+async function writeTile(atlas, column, row, name, cleanup = null) {
   const region = {
     left: column * tileSize,
     top: row * tileSize,
@@ -26,23 +27,26 @@ async function writeTile(atlas, column, row, name, clearLowerArea = false) {
   };
 
   let image;
-  if (clearLowerArea) {
+  if (cleanup) {
     const fullTile = await sharp(atlas).extract(region).png().toBuffer();
-    const clearStrip = await sharp(atlas)
+    const clearStripSource = await sharp(atlas)
       .extract({
         left: region.left + 20,
-        top: region.top + 348,
+        top: region.top + cleanup.sample,
         width: 472,
         height: 16,
       })
-      .resize(472, 129, { fit: "fill" })
+      .png()
+      .toBuffer();
+    const clearStrip = await sharp(clearStripSource)
+      .resize(472, 502 - cleanup.from, { fit: "fill" })
       .png()
       .toBuffer();
 
     // Stretch a clean strip from this same panel over the token samples while
     // preserving its original side and bottom borders.
     const cleanedTile = await sharp(fullTile)
-      .composite([{ input: clearStrip, left: 20, top: 364 }])
+      .composite([{ input: clearStrip, left: 20, top: cleanup.from }])
       .png()
       .toBuffer();
     image = sharp(cleanedTile);
@@ -57,12 +61,12 @@ async function writeTile(atlas, column, row, name, clearLowerArea = false) {
 }
 
 const tileJobs = [
-  [atlases.a, 0, 0, "jungle", true],
-  [atlases.a, 1, 0, "desert", true],
-  [atlases.a, 2, 0, "island", true],
-  [atlases.a, 0, 1, "mountain", true],
-  [atlases.a, 1, 1, "croc", true],
-  [atlases.a, 2, 1, "rum", true],
+  [atlases.a, 0, 0, "jungle", { from: 364, sample: 348 }],
+  [atlases.a, 1, 0, "desert", { from: 364, sample: 348 }],
+  [atlases.a, 2, 0, "island", { from: 364, sample: 348 }],
+  [atlases.a, 0, 1, "mountain", { from: 330, sample: 320 }],
+  [atlases.a, 1, 1, "croc", { from: 330, sample: 320 }],
+  [atlases.a, 2, 1, "rum", { from: 330, sample: 320 }],
   [atlases.b, 0, 0, "ice"],
   [atlases.b, 1, 0, "trap"],
   [atlases.b, 2, 0, "chute"],
@@ -112,6 +116,7 @@ await mkdir(reviewDir, { recursive: true });
 await Promise.all([
   cp(tileDir, path.join(reviewDir, "tiles"), { recursive: true, force: true }),
   cp(pieceDir, path.join(reviewDir, "pieces"), { recursive: true, force: true }),
+  cp(arrowDir, path.join(reviewDir, "arrows"), { recursive: true, force: true }),
 ]);
 
 console.log(`Built ${tileJobs.length + ships.length + 1} game assets.`);

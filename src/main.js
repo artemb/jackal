@@ -41,22 +41,32 @@ const scoresEl = $("scores");
 const actionsEl = $("actions");
 const bannerEl = $("conn-banner");
 
-const DIR_GLYPHS = {
-  "-1,0": "↑",
-  "-1,1": "↗",
-  "0,1": "→",
-  "1,1": "↘",
-  "1,0": "↓",
-  "1,-1": "↙",
-  "0,-1": "←",
-  "-1,-1": "↖",
-};
-
 const CANNON_ROTATIONS = {
   "-1,0": "0deg",
   "0,1": "90deg",
   "1,0": "180deg",
   "0,-1": "270deg",
+};
+
+const DIRECTION_ANGLES = {
+  "-1,0": 0,
+  "-1,1": 45,
+  "0,1": 90,
+  "1,1": 135,
+  "1,0": 180,
+  "1,-1": 225,
+  "0,-1": 270,
+  "-1,-1": 315,
+};
+
+const ARROW_BASE_ANGLES = {
+  "straight-1": 0,
+  "diagonal-1": 45,
+  "straight-2": 0,
+  "diagonal-2": 45,
+  "three-way": 180,
+  "straight-4": 0,
+  "diagonal-4": 45,
 };
 
 // ---------------------------------------------------------------- network
@@ -636,8 +646,10 @@ function renderTileContent(cell, tile) {
   } else if (tile.type === "arrow") {
     cell.classList.add("arrow");
     const el = document.createElement("div");
-    el.className = "arrows";
-    el.textContent = tile.dirs.map((d) => DIR_GLYPHS[d.join(",")]).join("");
+    el.className = `arrows arrows-${tile.arrow}`;
+    const firstDirection = DIRECTION_ANGLES[tile.dirs[0].join(",")];
+    const rotation = (firstDirection - ARROW_BASE_ANGLES[tile.arrow] + 360) % 360;
+    el.style.setProperty("--arrow-rotation", `${rotation}deg`);
     cell.appendChild(el);
   }
 }

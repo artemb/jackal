@@ -492,16 +492,20 @@ body {
 .arrows {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 3px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #7a2e1d;
-  letter-spacing: -2px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: rotate(var(--arrow-rotation));
   pointer-events: none;
 }
+
+.arrows-straight-1 { background-image: url("./assets/arrows/straight-1.svg"); }
+.arrows-diagonal-1 { background-image: url("./assets/arrows/diagonal-1.svg"); }
+.arrows-straight-2 { background-image: url("./assets/arrows/straight-2.svg"); }
+.arrows-diagonal-2 { background-image: url("./assets/arrows/diagonal-2.svg"); }
+.arrows-three-way { background-image: url("./assets/arrows/three-way.svg"); }
+.arrows-straight-4 { background-image: url("./assets/arrows/straight-4.svg"); }
+.arrows-diagonal-4 { background-image: url("./assets/arrows/diagonal-4.svg"); }
 
 .cell.selectable {
   cursor: pointer;
