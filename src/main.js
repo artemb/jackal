@@ -528,6 +528,137 @@ function renderGame() {
   renderPresence();
 }
 
+// --------------------------------------------------------- drag and drop
+// Pirates can be dragged: grabbing one selects it (highlighting the
+// legal destinations), the piece follows the pointer, and dropping it
+// on a highlighted cell plays the move. A plain tap falls through to
+// the usual click behaviour, so click-click still works.
+let drag = null;
+
+function attachDragHandlers(el) {
+  el.addEventListener("pointerdown", (ev) => {
+    if (!game || game.winner !== null || drag) return;
+    const p = game.pirates[Number(el.dataset.pid)];
+    if (!p?.alive) return;
+    ev.preventDefault();
+    drag = {
+      pirateId: p.id,
+      el,
+      canDrag: myTurn() && !game.pending && p.player === game.current,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      active: false,
+      hoverCell: null,
+    };
+    el.setPointerCapture(ev.pointerId);
+  });
+
+  el.addEventListener("pointermove", (ev) => {
+    if (!drag || drag.el !== el) return;
+    if (!drag.active) {
+      if (!drag.canDrag) return;
+      const dist = Math.hypot(ev.clientX - drag.startX, ev.clientY - drag.startY);
+      if (dist < 6) return;
+      startDragging(ev);
+    }
+    moveDragging(ev);
+  });
+
+  el.addEventListener("pointerup", (ev) => {
+    if (!drag || drag.el !== el) return;
+    const p = game.pirates[drag.pirateId];
+    if (!drag.active) {
+      drag = null;
+      onCellClick(p.pos.r, p.pos.c); // a tap acts like clicking the cell
+      return;
+    }
+    finishDragging(ev, p);
+  });
+
+  el.addEventListener("pointercancel", () => {
+    if (!drag || drag.el !== el) return;
+    drag.el.classList.remove("dragging");
+    drag.el.style.transition = "";
+    drag.hoverCell?.classList.remove("drop-hover");
+    drag = null;
+    renderPieces();
+  });
+}
+
+function startDragging(ev) {
+  const p = game.pirates[drag.pirateId];
+  drag.active = true;
+  selected = p.id;
+  renderGame(); // light up the legal destinations
+  const el = drag.el;
+  el.classList.add("dragging");
+  el.style.transition = "none";
+  const rect = el.getBoundingClientRect();
+  drag.grabDX = ev.clientX - rect.left;
+  drag.grabDY = ev.clientY - rect.top;
+  const base = cellEls[0][0];
+  drag.geom = {
+    frame: $("pieces").getBoundingClientRect(),
+    left0: base.offsetLeft,
+    top0: base.offsetTop,
+    strideX: cellEls[0][1].offsetLeft - base.offsetLeft,
+    strideY: cellEls[1][0].offsetTop - base.offsetTop,
+  };
+  drag.moves = legalMoves(game, p);
+  drag.shipMoves = currentShipMoves();
+}
+
+function dragCellAt(ev) {
+  const g = drag.geom;
+  const c = Math.floor((ev.clientX - g.frame.left - g.left0) / g.strideX);
+  const r = Math.floor((ev.clientY - g.frame.top - g.top0) / g.strideY);
+  if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return null;
+  return { r, c, el: cellEls[r][c] };
+}
+
+function moveDragging(ev) {
+  const g = drag.geom;
+  const x = ev.clientX - g.frame.left - drag.grabDX;
+  const y = ev.clientY - g.frame.top - drag.grabDY;
+  drag.el.style.transform = `translate(${x}px, ${y}px)`;
+
+  const cell = dragCellAt(ev);
+  const legal =
+    cell &&
+    [...drag.moves, ...drag.shipMoves].some(
+      (m) => m.r === cell.r && m.c === cell.c,
+    );
+  if (drag.hoverCell && drag.hoverCell !== cell?.el) {
+    drag.hoverCell.classList.remove("drop-hover");
+    drag.hoverCell = null;
+  }
+  if (legal) {
+    cell.el.classList.add("drop-hover");
+    drag.hoverCell = cell.el;
+  }
+}
+
+function finishDragging(ev, pirate) {
+  const cell = dragCellAt(ev);
+  drag.el.classList.remove("dragging");
+  drag.el.style.transition = "";
+  drag.hoverCell?.classList.remove("drop-hover");
+  const { moves, shipMoves } = drag;
+  drag = null;
+
+  if (cell) {
+    if (shipMoves.some((m) => m.r === cell.r && m.c === cell.c)) {
+      sendAction({ kind: "ship", r: cell.r, c: cell.c });
+      return;
+    }
+    if (moves.some((m) => m.r === cell.r && m.c === cell.c)) {
+      sendAction({ kind: "move", pirateId: pirate.id, r: cell.r, c: cell.c });
+      return;
+    }
+  }
+  renderPieces(); // not a legal drop: glide back home
+}
+
 // Create a piece element without animating its first placement.
 function spawnPiece(className) {
   const el = document.createElement("div");
@@ -576,6 +707,8 @@ function renderPieces() {
     if (!el) {
       el = spawnPiece(`pirate p${p.player + 1}`);
       el.innerHTML = `<span class="cross"></span><span class="carry-coin"></span>`;
+      el.dataset.pid = p.id;
+      attachDragHandlers(el);
       pirateEls.set(p.id, el);
     }
     if (!p.alive) {
@@ -583,6 +716,9 @@ function renderPieces() {
       continue;
     }
     el.classList.remove("dead");
+
+    // A pirate mid-drag follows the pointer, not the game state.
+    if (drag?.active && drag.pirateId === p.id) continue;
 
     const mates = byCell.get(key(p.pos.r, p.pos.c));
     const idx = mates.indexOf(p);

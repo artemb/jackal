@@ -644,6 +644,24 @@ body {
     transform 0.45s ease,
     opacity 0.5s ease;
   will-change: transform;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pirate > * {
+  pointer-events: none;
+}
+
+.pirate.dragging {
+  z-index: 3;
+  cursor: grabbing;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+}
+
+.cell.move-target.drop-hover::after {
+  border-style: solid;
+  background: rgba(255, 215, 94, 0.22);
 }
 
 .pirate.dead {
