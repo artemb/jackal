@@ -19,6 +19,7 @@ export function key(r, c) {
 // Every map hides the same coin stashes on random tiles:
 // 5 tiles with 1 coin, 2 with 2, 3 with 3, 2 with 4 and 1 with 5.
 const COIN_STASHES = [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 5];
+export const TOTAL_COINS = COIN_STASHES.reduce((a, b) => a + b, 0);
 
 // Arrow tiles: 3 of each type per map, each rotated by a random multiple
 // of 90 degrees when the map is generated. Directions are [dr, dc].
@@ -217,8 +218,18 @@ export function createGame({ teams } = {}) {
 
   // selected is null or { kind: "pirate", id }. pending is set while a
   // pirate stands on a multi-direction arrow and must choose where to fly:
-  // { pirateId, options: [{r,c}], visited: Set<tileKey> }.
-  return { tiles, players, pirates, current: 0, selected: null, pending: null };
+  // { pirateId, options: [{r,c}], visited: Set<tileKey> }. lostCoins
+  // counts coins destroyed forever (sunk, eaten); winner is a team id.
+  return {
+    tiles,
+    players,
+    pirates,
+    current: 0,
+    selected: null,
+    pending: null,
+    lostCoins: 0,
+    winner: null,
+  };
 }
 
 function sameTeam(state, a, b) {
@@ -251,6 +262,9 @@ function onShip(state, pirate) {
 export function legalMoves(state, pirate) {
   const { r, c } = pirate.pos;
   const moves = [];
+
+  // The game is over: nothing moves anymore.
+  if (state.winner !== null) return moves;
 
   // Sleeping off the rum: the pirate cannot move at all this turn.
   if (pirate.drunk > 0) return moves;
@@ -342,6 +356,7 @@ export function pickUpCoin(state, pirate) {
 // turn to revive one of its player's fallen pirates, which reappears
 // in that same fortress.
 export function canRevive(state, pirate) {
+  if (state.winner !== null) return false;
   const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
   if (tile?.type !== "native") return false;
   return state.pirates.some((p) => sameTeam(state, p, pirate) && !p.alive);
@@ -379,12 +394,36 @@ export function crewCanAct(state, crewId) {
   );
 }
 
+// A team wins the moment its banked gold exceeds what any rival team
+// could still reach: the rival's bank plus every coin not yet banked or
+// destroyed. With two teams that means more than half of what's in play.
+function checkWinner(state) {
+  if (state.winner !== null) return;
+  const teamGold = new Map();
+  for (const pl of state.players) {
+    teamGold.set(pl.team, (teamGold.get(pl.team) ?? 0) + pl.gold);
+  }
+  if (teamGold.size < 2) return;
+  const banked = [...teamGold.values()].reduce((a, b) => a + b, 0);
+  const pool = TOTAL_COINS - banked - state.lostCoins;
+  for (const [team, gold] of teamGold) {
+    const bestRival = Math.max(
+      ...[...teamGold.entries()]
+        .filter(([t]) => t !== team)
+        .map(([, g]) => g),
+    );
+    if (gold > bestRival + pool) state.winner = team;
+  }
+}
+
 function endTurn(state) {
   state.selected = null;
   state.pending = null;
   for (const p of state.pirates) {
     if (p.drunk > 0) p.drunk -= 1;
   }
+  checkWinner(state);
+  if (state.winner !== null) return;
   // Pass the turn clockwise to the next crew that can actually act;
   // crews that are wiped out or fully stuck are skipped. If nobody can
   // act, stay put.
@@ -469,8 +508,9 @@ function stepPirate(state, pirate, r, c, ctx) {
     state.players[pirate.player].gold += 1;
     pirate.carrying = false;
   }
-  if (isOverboard(state, pirate)) {
+  if (isOverboard(state, pirate) && pirate.carrying) {
     pirate.carrying = false; // the coin sinks
+    state.lostCoins += 1;
   }
 
   if (tile?.type === "croc") {
@@ -599,6 +639,8 @@ export function serializeGame(state) {
     players: state.players,
     pirates: state.pirates,
     current: state.current,
+    lostCoins: state.lostCoins,
+    winner: state.winner,
     pending: state.pending
       ? {
           pirateId: state.pending.pirateId,
@@ -618,6 +660,8 @@ export function deserializeGame(data) {
     players: data.players,
     pirates: data.pirates,
     current: data.current,
+    lostCoins: data.lostCoins ?? 0,
+    winner: data.winner ?? null,
     selected: null,
     pending: data.pending
       ? {
@@ -662,6 +706,7 @@ function fortBlocked(state, pirate, r, c) {
 }
 
 function kill(state, pirate) {
+  if (pirate.carrying) state.lostCoins += 1; // the coin dies with it
   pirate.alive = false;
   pirate.carrying = false;
   pirate.progress = 0;
@@ -691,6 +736,7 @@ export function piratesAboard(state, player) {
 // still faces an island tile (positions 2-10 along its side). It needs
 // at least one friendly pirate aboard to sail.
 export function legalShipMoves(state, player) {
+  if (state.winner !== null) return [];
   if (piratesAboard(state, player).length === 0) return [];
   const moves = [];
   // Ships on the top/bottom shores slide along columns, ships on the

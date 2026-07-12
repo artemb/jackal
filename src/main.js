@@ -247,7 +247,7 @@ $("start-btn").addEventListener("click", () => send({ t: "start" }));
 
 // ------------------------------------------------------------------- game
 function myTurn() {
-  return game && room && room.seats[game.current] === myId;
+  return game && room && game.winner === null && room.seats[game.current] === myId;
 }
 
 function selectedPirate() {
@@ -431,6 +431,33 @@ function renderTileContent(cell, tile) {
 }
 
 function renderStatus() {
+  if (game.winner !== null) {
+    const crews = game.players.filter((p) => p.team === game.winner);
+    const controllers = [
+      ...new Set(
+        crews
+          .map((c) => room.players.find((p) => p.id === room.seats[c.id])?.name)
+          .filter(Boolean),
+      ),
+    ];
+    turnEl.innerHTML = "";
+    for (const c of crews) {
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = `var(--p${c.id + 1})`;
+      turnEl.appendChild(dot);
+    }
+    const names = crews.map((c) => c.name).join(" & ");
+    const who = controllers.length ? ` (${controllers.join(", ")})` : "";
+    turnEl.appendChild(
+      document.createTextNode(` 🏴‍☠️ ${names}${who} win the game!`),
+    );
+    scoresEl.textContent = game.players
+      .map((p) => `${p.name} 🪙 ${p.gold}`)
+      .join("  ·  ");
+    return;
+  }
+
   const crew = game.players[game.current];
   const controller = room.players.find((p) => p.id === room.seats[crew.id]);
   turnEl.innerHTML = "";
@@ -452,6 +479,7 @@ function renderStatus() {
 
 function renderActions() {
   actionsEl.innerHTML = "";
+  if (game.winner !== null) return;
   if (game.pending) {
     const hint = document.createElement("span");
     hint.className = "hint";

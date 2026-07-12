@@ -1196,6 +1196,57 @@ describe("Q. Crews and teams", () => {
   });
 });
 
+describe("V. Victory", () => {
+  function twoTeams(s) {
+    s.players[0].team = 0;
+    s.players[1].team = 0;
+    s.players[2].team = 1;
+    s.players[3].team = 1;
+  }
+
+  it("V1: a team wins once no rival can catch up (two teams: more than half)", () => {
+    const s = blankGame();
+    twoTeams(s);
+    s.players[0].gold = 16; // 16 > 15 still out there
+    movePirate(s, s.pirates[0], 11, 6); // any turn end triggers the check
+    expect(s.winner).toBe(0);
+
+    const s2 = blankGame();
+    twoTeams(s2);
+    s2.players[0].gold = 15; // rivals could still reach 16
+    movePirate(s2, s2.pirates[0], 11, 6);
+    expect(s2.winner).toBe(null);
+  });
+
+  it("V2: coins lost at sea shrink what rivals can reach", () => {
+    const s = blankGame();
+    twoTeams(s);
+    s.players[0].gold = 14;
+    s.lostCoins = 4; // only 13 remain reachable for the rival
+    movePirate(s, s.pirates[0], 11, 6);
+    expect(s.winner).toBe(0);
+  });
+
+  it("V3: gold split across allied crews counts together", () => {
+    const s = blankGame();
+    twoTeams(s);
+    s.players[0].gold = 9;
+    s.players[1].gold = 7; // team 0 banks 16 in total
+    movePirate(s, s.pirates[0], 11, 6);
+    expect(s.winner).toBe(0);
+  });
+
+  it("V4: after the win nothing moves any more", () => {
+    const s = blankGame();
+    twoTeams(s);
+    s.players[0].gold = 16;
+    movePirate(s, s.pirates[0], 11, 6);
+    expect(s.winner).toBe(0);
+    for (const p of s.pirates) expect(legalMoves(s, p)).toEqual([]);
+    for (const pl of s.players) expect(legalShipMoves(s, pl)).toEqual([]);
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

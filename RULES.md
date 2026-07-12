@@ -239,6 +239,18 @@ disagree, one of them is a bug — decide which and fix it.
 - **J3.** The plane is one-use: a flight beyond walking range spends it
   for the rest of the game. A plain adjacent step off the tile does not.
 
+## V. Victory
+
+- **V1.** Each map holds 31 coins in total (C1). A team's score is the
+  gold banked across all its crews' ships.
+- **V2.** A team wins the moment its score exceeds what any rival team
+  could still reach — the rival's current score plus every coin not yet
+  banked and not destroyed. With two teams that means more than half of
+  the coins still in play.
+- **V3.** Coins destroyed forever (sunk with a swimmer or a dead pirate,
+  eaten with its carrier) are out of play and count for nobody.
+- **V4.** After the win nothing moves; the game is over.
+
 ## T. Turns
 
 - **T1.** Red moves first.

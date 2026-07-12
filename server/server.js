@@ -67,6 +67,7 @@ const inList = (list, r, c) => list.some((m) => m.r === r && m.c === c);
 function applyAction(room, pid, a) {
   const s = room.game;
   if (!s) return "the game has not started";
+  if (s.winner !== null) return "the game is over";
   if (room.seats[s.current] !== pid) return "not your crew's turn";
 
   if (a.kind === "choose") {
