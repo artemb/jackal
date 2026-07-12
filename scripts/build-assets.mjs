@@ -1,11 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { cp, mkdir } from "node:fs/promises";
 import sharp from "sharp";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(root, "src/assets/source");
 const tileDir = path.join(root, "src/assets/tiles");
 const pieceDir = path.join(root, "src/assets/pieces");
+const reviewDir = path.join(root, "asset-review/assets/production");
 const tileSize = 512;
 const outputSize = 256;
 
@@ -71,11 +73,16 @@ const tileJobs = [
   [atlases.c, 1, 0, "cannon"],
   [atlases.c, 2, 0, "plane"],
   [atlases.c, 0, 1, "back"],
-  [atlases.c, 1, 1, "coin"],
   [atlases.c, 2, 1, "empty"],
 ];
 
 await Promise.all(tileJobs.map((job) => writeTile(...job)));
+
+await sharp(atlases.c)
+  .extract({ left: 562, top: 547, width: 412, height: 412 })
+  .resize(128, 128, { kernel: sharp.kernel.lanczos3 })
+  .webp({ quality: 90, effort: 6 })
+  .toFile(path.join(tileDir, "coin.webp"));
 
 const shipAtlas = path.join(sourceDir, "ships.png");
 const shipSize = 627;
@@ -101,4 +108,10 @@ await Promise.all(
   ),
 );
 
-console.log(`Built ${tileJobs.length + ships.length} game assets.`);
+await mkdir(reviewDir, { recursive: true });
+await Promise.all([
+  cp(tileDir, path.join(reviewDir, "tiles"), { recursive: true, force: true }),
+  cp(pieceDir, path.join(reviewDir, "pieces"), { recursive: true, force: true }),
+]);
+
+console.log(`Built ${tileJobs.length + ships.length + 1} game assets.`);

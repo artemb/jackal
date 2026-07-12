@@ -312,18 +312,15 @@ body {
 .cell.tile.closed {
   background: var(--tile-back);
   border: 2px solid var(--tile-back-edge);
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(0, 0, 0, 0.08) 0px,
-    rgba(0, 0, 0, 0.08) 6px,
-    transparent 6px,
-    transparent 12px
-  );
+  background-image: url("./assets/tiles/back.webp");
+  background-size: cover;
 }
 
 .cell.tile.open {
   background: var(--tile-open);
   border: 2px solid var(--tile-open-edge);
+  background-image: url("./assets/tiles/empty.webp");
+  background-size: cover;
 }
 
 .cell.flipping {
@@ -449,13 +446,30 @@ body {
 .terrain {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 2px;
-  font-size: 18px;
-  opacity: 0.85;
+  border-radius: inherit;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   pointer-events: none;
+}
+
+.terrain-jungle { background-image: url("./assets/tiles/jungle.webp"); }
+.terrain-desert { background-image: url("./assets/tiles/desert.webp"); }
+.terrain-island { background-image: url("./assets/tiles/island.webp"); }
+.terrain-mountain { background-image: url("./assets/tiles/mountain.webp"); }
+.terrain-croc { background-image: url("./assets/tiles/croc.webp"); }
+.terrain-rum { background-image: url("./assets/tiles/rum.webp"); }
+.terrain-ice { background-image: url("./assets/tiles/ice.webp"); }
+.terrain-trap { background-image: url("./assets/tiles/trap.webp"); }
+.terrain-chute { background-image: url("./assets/tiles/chute.webp"); }
+.terrain-horse { background-image: url("./assets/tiles/horse.webp"); }
+.terrain-cannibal { background-image: url("./assets/tiles/cannibal.webp"); }
+.terrain-fort { background-image: url("./assets/tiles/fort.webp"); }
+.terrain-native { background-image: url("./assets/tiles/native.webp"); }
+.terrain-plane { background-image: url("./assets/tiles/plane.webp"); }
+.terrain-cannon {
+  background-image: url("./assets/tiles/cannon.webp");
+  transform: rotate(var(--cannon-rotation));
 }
 
 .steps {
@@ -518,7 +532,12 @@ body {
 }
 
 .ship .glyph {
-  line-height: 1;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .ship-gold {
@@ -558,19 +577,36 @@ body {
 }
 
 .ship.p1 {
-  background: radial-gradient(circle at 50% 40%, var(--p1), #8f2320);
+  background: none;
 }
 
+.ship.p1 .glyph { background-image: url("./assets/pieces/ship-red.webp"); }
+
 .ship.p2 {
-  background: radial-gradient(circle at 50% 40%, var(--p2), #17204f);
+  background: none;
+}
+
+.ship.p2 .glyph {
+  background-image: url("./assets/pieces/ship-blue.webp");
+  transform: rotate(180deg);
 }
 
 .ship.p3 {
-  background: radial-gradient(circle at 50% 40%, var(--p3), #174028);
+  background: none;
+}
+
+.ship.p3 .glyph {
+  background-image: url("./assets/pieces/ship-green.webp");
+  transform: rotate(90deg);
 }
 
 .ship.p4 {
-  background: radial-gradient(circle at 50% 40%, var(--p4), #6e5209);
+  background: none;
+}
+
+.ship.p4 .glyph {
+  background-image: url("./assets/pieces/ship-yellow.webp");
+  transform: rotate(270deg);
 }
 
 .coins {
@@ -580,7 +616,7 @@ body {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe08a, #d9a520);
+  background: #d9a520 url("./assets/tiles/coin.webp") center / cover;
   border: 1px solid #a87a10;
   color: #5c3a00;
   font-size: 12px;

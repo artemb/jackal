@@ -41,13 +41,6 @@ const scoresEl = $("scores");
 const actionsEl = $("actions");
 const bannerEl = $("conn-banner");
 
-const SLOW_GLYPHS = {
-  jungle: "🌴",
-  desert: "🌵",
-  island: "🏝️",
-  mountain: "⛰️",
-};
-
 const DIR_GLYPHS = {
   "-1,0": "↑",
   "-1,1": "↗",
@@ -57,6 +50,13 @@ const DIR_GLYPHS = {
   "1,-1": "↙",
   "0,-1": "←",
   "-1,-1": "↖",
+};
+
+const CANNON_ROTATIONS = {
+  "-1,0": "0deg",
+  "0,1": "90deg",
+  "1,0": "180deg",
+  "0,-1": "270deg",
 };
 
 // ---------------------------------------------------------------- network
@@ -530,7 +530,7 @@ function renderPieces() {
     let el = shipEls.get(crew.id);
     if (!el) {
       el = spawnPiece(`ship p${crew.id + 1}`);
-      el.innerHTML = `<span class="glyph">⛵</span><span class="ship-gold"></span>`;
+      el.innerHTML = `<span class="glyph"></span><span class="ship-gold"></span>`;
       shipEls.set(crew.id, el);
     }
     const cell = cellEls[crew.ship.r][crew.ship.c];
@@ -602,33 +602,37 @@ window.addEventListener("resize", () => {
 });
 
 function renderTileContent(cell, tile) {
-  const add = (cls, text) => {
+  const add = (cls, asset = cls) => {
     cell.classList.add(cls);
     const el = document.createElement("div");
-    el.className = "terrain";
-    el.textContent = text;
+    el.className = `terrain terrain-${asset}`;
     if (tile.type === "plane" && tile.used) el.classList.add("spent");
     cell.appendChild(el);
+    return el;
   };
   if (tile.type === "slow") {
     cell.classList.add(tile.slow);
-    add("slow", SLOW_GLYPHS[tile.slow]);
+    add("slow", tile.slow);
     const stepsEl = document.createElement("div");
     stepsEl.className = "steps";
     stepsEl.textContent = tile.steps;
     cell.appendChild(stepsEl);
-  } else if (tile.type === "croc") add("croc", "🐊");
-  else if (tile.type === "rum") add("rum", "🛢️");
-  else if (tile.type === "ice") add("ice", "❄️");
-  else if (tile.type === "trap") add("trap", "🕸️");
-  else if (tile.type === "chute") add("chute", "🪂");
-  else if (tile.type === "horse") add("horse", "🐎");
-  else if (tile.type === "cannibal") add("cannibal", "💀");
-  else if (tile.type === "fort") add("fort", "🏰");
-  else if (tile.type === "native") add("fort", "💃");
-  else if (tile.type === "plane") add("plane", "✈️");
+  } else if (tile.type === "croc") add("croc");
+  else if (tile.type === "rum") add("rum");
+  else if (tile.type === "ice") add("ice");
+  else if (tile.type === "trap") add("trap");
+  else if (tile.type === "chute") add("chute");
+  else if (tile.type === "horse") add("horse");
+  else if (tile.type === "cannibal") add("cannibal");
+  else if (tile.type === "fort") add("fort");
+  else if (tile.type === "native") add("fort", "native");
+  else if (tile.type === "plane") add("plane");
   else if (tile.type === "cannon") {
-    add("cannon", `💣${DIR_GLYPHS[tile.dir.join(",")]}`);
+    const cannon = add("cannon");
+    cannon.style.setProperty(
+      "--cannon-rotation",
+      CANNON_ROTATIONS[tile.dir.join(",")],
+    );
   } else if (tile.type === "arrow") {
     cell.classList.add("arrow");
     const el = document.createElement("div");
