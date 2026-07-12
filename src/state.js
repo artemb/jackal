@@ -114,6 +114,10 @@ export const CREWS = [
   { name: "Yellow", ship: { r: 6, c: 12 }, forward: [0, -1] },
 ];
 
+// Turns go clockwise around the island: Red (south), Green (west),
+// Blue (north), Yellow (east).
+const TURN_ORDER = [0, 2, 1, 3];
+
 export function createGame({ teams } = {}) {
   const tiles = new Map();
   for (let r = 0; r < SIZE; r++) {
@@ -381,10 +385,12 @@ function endTurn(state) {
   for (const p of state.pirates) {
     if (p.drunk > 0) p.drunk -= 1;
   }
-  // Pass the turn to the next crew that can actually act; crews that are
-  // wiped out or fully stuck are skipped. If nobody can act, stay put.
-  for (let i = 1; i <= state.players.length; i++) {
-    const next = (state.current + i) % state.players.length;
+  // Pass the turn clockwise to the next crew that can actually act;
+  // crews that are wiped out or fully stuck are skipped. If nobody can
+  // act, stay put.
+  const pos = TURN_ORDER.indexOf(state.current);
+  for (let i = 1; i <= TURN_ORDER.length; i++) {
+    const next = TURN_ORDER[(pos + i) % TURN_ORDER.length];
     if (crewCanAct(state, next)) {
       state.current = next;
       return;

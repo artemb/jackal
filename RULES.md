@@ -24,8 +24,9 @@ disagree, one of them is a bug — decide which and fix it.
   other from traps, and revive each other's dead. With two players each
   controls two crews on opposite sides; with three, one player controls
   two opposite crews; with four, one crew each.
-- **Q3.** Crews take turns in fixed order (Red, Blue, Green, Yellow).
-  A crew with no possible turn-spending action is skipped.
+- **Q3.** Crews take turns clockwise around the island: Red (south),
+  Green (west), Blue (north), Yellow (east). A crew with no possible
+  turn-spending action is skipped.
 
 ## S. Ships
 

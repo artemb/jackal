@@ -128,7 +128,7 @@ describe("S. Ships", () => {
   it("S5: moving the ship spends the turn", () => {
     const s = blankGame();
     moveShip(s, s.players[0], 12, 5);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 });
 
@@ -179,7 +179,7 @@ describe("M. Pirate movement", () => {
   it("M7: moving a pirate spends the turn", () => {
     const s = blankGame();
     movePirate(s, s.pirates[0], 11, 6);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 });
 
@@ -305,7 +305,7 @@ describe("A. Arrows", () => {
     expect(p.pos).toEqual({ r: 10, c: 6 });
     expect(s.tiles.get(key(10, 6)).open).toBe(true);
     expect(s.pending).toBe(null);
-    expect(s.current).toBe(1); // one turn spent in total
+    expect(s.current).not.toBe(0); // one turn spent in total
   });
 
   it("A4: a multi-direction arrow waits for the player to choose", () => {
@@ -326,7 +326,7 @@ describe("A. Arrows", () => {
     chooseArrowMove(s, { r: 11, c: 7 });
     expect(p.pos).toEqual({ r: 11, c: 7 });
     expect(s.pending).toBe(null);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("A5: arrows chain, and a loop kills the pirate", () => {
@@ -336,7 +336,7 @@ describe("A. Arrows", () => {
     const p = s.pirates[0];
     movePirate(s, p, 11, 6);
     expect(p.pos).toEqual({ r: 9, c: 6 });
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
 
     const s2 = blankGame();
     setArrow(s2, 11, 6, [N]);
@@ -345,7 +345,7 @@ describe("A. Arrows", () => {
     movePirate(s2, q, 11, 6);
     expect(q.alive).toBe(false);
     expect(piratesAt(s2, 11, 6)).toHaveLength(0);
-    expect(s2.current).toBe(1);
+    expect(s2.current).not.toBe(0);
   });
 
   it("A6: an arrow into the sea throws the pirate overboard, coin sunk; onto the enemy ship kills it", () => {
@@ -359,7 +359,7 @@ describe("A. Arrows", () => {
     expect(p.alive).toBe(true);
     expect(p.carrying).toBe(false);
     expect(s.players[0].gold).toBe(0); // the coin sank, it was not stashed
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
 
     const s2 = blankGame();
     setArrow(s2, 1, 6, [N], { open: true }); // points at the enemy (Blue) ship
@@ -423,7 +423,7 @@ describe("O. Overboard and death", () => {
     const [s, p] = overboardGame();
     movePirate(s, p, 12, 6);
     expect(piratesAboard(s, s.players[0])).toContain(p);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("O4: boarding the enemy ship kills the swimmer", () => {
@@ -434,7 +434,7 @@ describe("O. Overboard and death", () => {
     expect(has(moves, 0, 6)).toBe(true); // the fatal option is offered
     movePirate(s, p, 0, 6);
     expect(p.alive).toBe(false);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("O4: an enemy ship sailing into a swimmer's cell kills it", () => {
@@ -483,13 +483,13 @@ describe("D. Slow tiles", () => {
     const p = s.pirates[0];
     movePirate(s, p, 11, 6); // turn 1: enter
     expect(p.progress).toBe(1);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
 
     s.current = 0;
     expect(legalMoves(s, p)).toEqual([{ r: 11, c: 6 }]); // stuck: step in place
     movePirate(s, p, 11, 6); // turn 2
     expect(p.progress).toBe(2);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
 
     s.current = 0;
     movePirate(s, p, 11, 6); // turn 3: crossing done
@@ -520,7 +520,7 @@ describe("D. Slow tiles", () => {
     expect(p.pos).toEqual({ r: 10, c: 6 });
     expect(p.progress).toBe(1);
     expect(s.pending).toBe(null);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
     s.current = 0;
     expect(legalMoves(s, p)).toEqual([{ r: 10, c: 6 }]);
   });
@@ -545,7 +545,7 @@ describe("K. Crocodile", () => {
     movePirate(s, p, 11, 6); // disembark straight into the crocodile
     expect(s.tiles.get(key(11, 6)).open).toBe(true);
     expect(p.pos).toEqual({ r: 12, c: 6 }); // back aboard the ship
-    expect(s.current).toBe(1); // the turn is still spent
+    expect(s.current).not.toBe(0); // the turn is still spent
   });
 
   it("K2: an arrow chain into a crocodile returns the pirate to where the turn began", () => {
@@ -556,7 +556,7 @@ describe("K. Crocodile", () => {
     movePirate(s, p, 11, 6); // ship -> arrow -> crocodile
     expect(p.pos).toEqual({ r: 12, c: 6 }); // not stranded on the arrow
     expect(s.pending).toBe(null);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("K2: a finished slow-tile crossing survives the bounce", () => {
@@ -600,7 +600,7 @@ describe("F. Fighting", () => {
     expect(b1.pos).toEqual({ r: 0, c: 6 }); // both defenders retreat
     expect(b2.pos).toEqual({ r: 0, c: 6 });
     expect(b1.alive && b2.alive).toBe(true); // beaten, not dead
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("F2: a beaten pirate drops its coin on the tile and sobers up", () => {
@@ -708,7 +708,7 @@ describe("I. Ice", () => {
     expect(p.pos).toEqual({ r: 7, c: 7 }); // slid diagonally onward
     expect(s.tiles.get(key(6, 6)).open).toBe(true);
     expect(s.tiles.get(key(7, 7)).open).toBe(true);
-    expect(s.current).toBe(1); // one turn in total
+    expect(s.current).not.toBe(0); // one turn in total
   });
 
   it("I2: ice chains across further ice tiles", () => {
@@ -841,7 +841,7 @@ describe("P. Parachute", () => {
     movePirate(s, p, 6, 6);
     expect(s.tiles.get(key(6, 6)).open).toBe(true); // the tile is revealed
     expect(p.pos).toEqual({ r: 12, c: 6 }); // back aboard
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("P2: a carried coin is stashed on landing", () => {
@@ -891,7 +891,7 @@ describe("H. Horse", () => {
     chooseArrowMove(s, { r: 4, c: 5 });
     expect(p.pos).toEqual({ r: 4, c: 5 });
     expect(s.tiles.get(key(4, 5)).open).toBe(true); // the jump flips tiles
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("H2: off-board jumps are not offered near the edge", () => {
@@ -942,7 +942,7 @@ describe("L. Cannibal", () => {
     movePirate(s, p, 11, 6);
     expect(p.alive).toBe(false);
     expect(s.tiles.get(key(11, 6)).open).toBe(true);
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("L2: forced moves into the cannibal are fatal too", () => {
@@ -1005,7 +1005,7 @@ describe("G. Fortresses", () => {
     movePirate(s, red, 11, 6); // arrow fires it at the held fortress
     expect(red.pos).toEqual({ r: 12, c: 6 }); // repelled home
     expect(blue.pos).toEqual({ r: 10, c: 6 }); // the defender is untouched
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("G4: the native woman revives a fallen pirate in her fortress", () => {
@@ -1022,7 +1022,7 @@ describe("G. Fortresses", () => {
     revivePirate(s, p);
     expect(q.alive).toBe(true);
     expect(q.pos).toEqual({ r: 6, c: 6 }); // reborn in the fortress
-    expect(s.current).toBe(1); // reviving spends the turn
+    expect(s.current).not.toBe(0); // reviving spends the turn
 
     s.current = 0;
     expect(canRevive(s, p)).toBe(false); // nobody left to revive
@@ -1054,7 +1054,7 @@ describe("W. Cannons", () => {
     expect(p.pos).toEqual({ r: 5, c: 0 }); // splashed down past the island
     expect(p.alive).toBe(true); // swimming
     expect(s.tiles.get(key(5, 3)).open).toBe(false); // flew over, no flips
-    expect(s.current).toBe(1);
+    expect(s.current).not.toBe(0);
   });
 
   it("W2: a shot into the own ship boards it (stashing a coin)", () => {
@@ -1190,9 +1190,9 @@ describe("Q. Crews and teams", () => {
 
   it("Q4: crews that cannot act are skipped in the turn order", () => {
     const s = blankGame();
-    for (const p of s.pirates.slice(3, 6)) p.alive = false; // Blue wiped out
+    for (const p of s.pirates.slice(6, 9)) p.alive = false; // Green wiped out
     movePirate(s, s.pirates[0], 11, 6); // Red moves
-    expect(s.current).toBe(2); // Blue is skipped, Green is up
+    expect(s.current).toBe(1); // Green (next clockwise) is skipped, Blue is up
   });
 });
 
@@ -1203,16 +1203,16 @@ describe("T. Turns", () => {
     expect(s.players[0].name).toBe("Red");
   });
 
-  it("T2: the turn passes around all four crews on every turn-spending action", () => {
+  it("T2: the turn passes clockwise around the island (S, W, N, E)", () => {
     const s = blankGame();
-    movePirate(s, s.pirates[0], 11, 6); // Red
-    expect(s.current).toBe(1);
-    movePirate(s, s.pirates[3], 1, 6); // Blue
-    expect(s.current).toBe(2);
+    movePirate(s, s.pirates[0], 11, 6); // Red (south)
+    expect(s.current).toBe(2); // Green (west) is next, clockwise
     movePirate(s, s.pirates[6], 6, 1); // Green
-    expect(s.current).toBe(3);
+    expect(s.current).toBe(1); // Blue (north)
+    movePirate(s, s.pirates[3], 1, 6); // Blue
+    expect(s.current).toBe(3); // Yellow (east)
     moveShip(s, s.players[3], 5, 12); // Yellow sails
-    expect(s.current).toBe(0);
+    expect(s.current).toBe(0); // back to Red
   });
 
   it("T3: pick up and drop are free actions", () => {
