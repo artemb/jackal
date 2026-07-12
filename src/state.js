@@ -80,6 +80,10 @@ const CANNIBAL_COUNT = 1;
 const FORT_COUNT = 2;
 const NATIVE_COUNT = 1;
 
+// Cannons shoot the pirate clean over the island into the water in the
+// direction they face (fixed randomly when the map is generated).
+const CANNON_COUNT = 2;
+
 // Horse tiles launch the pirate on a chess-knight jump.
 const HORSE_COUNT = 2;
 const KNIGHT_JUMPS = [
@@ -151,6 +155,11 @@ export function createGame() {
   }
   for (let n = 0; n < NATIVE_COUNT; n++) {
     tiles.get(spots[spot++]).type = "native";
+  }
+  for (let n = 0; n < CANNON_COUNT; n++) {
+    const tile = tiles.get(spots[spot++]);
+    tile.type = "cannon";
+    tile.dir = rotateDir(N, Math.floor(Math.random() * 4));
   }
 
   const players = [
@@ -414,6 +423,19 @@ function stepPirate(state, pirate, r, c, ctx) {
     state.pending = { pirateId: pirate.id, options, ctx };
     state.selected = { kind: "pirate", id: pirate.id };
     return flipped;
+  }
+
+  if (tile?.type === "cannon") {
+    // Fired! The pirate flies in a straight line over the island and
+    // splashes down at the first non-island cell — usually the sea
+    // (overboard), sometimes a ship (boarding or fatal). Tiles it flies
+    // over are not flipped.
+    let [tr, tc] = [r + tile.dir[0], c + tile.dir[1]];
+    while (isIsland(tr, tc)) {
+      tr += tile.dir[0];
+      tc += tile.dir[1];
+    }
+    return stepPirate(state, pirate, tr, tc, ctx) || flipped;
   }
 
   if (tile?.type === "cannibal") {

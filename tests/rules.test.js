@@ -1024,6 +1024,56 @@ describe("G. Fortresses", () => {
   });
 });
 
+describe("W. Cannons", () => {
+  const setCannon = (state, r, c, dir) => {
+    const tile = state.tiles.get(key(r, c));
+    tile.type = "cannon";
+    tile.dir = dir;
+  };
+
+  it("W1: every map has 2 cannon tiles facing a straight direction", () => {
+    const s = createGame();
+    const cannons = [...s.tiles.values()].filter((t) => t.type === "cannon");
+    expect(cannons).toHaveLength(2);
+    for (const t of cannons) {
+      expect(Math.abs(t.dir[0]) + Math.abs(t.dir[1])).toBe(1);
+    }
+  });
+
+  it("W2: the shot flies over the island into the water", () => {
+    const s = blankGame();
+    setCannon(s, 5, 5, [0, -1]); // facing west
+    const p = s.pirates[0];
+    placePirate(s, p, 5, 6);
+    movePirate(s, p, 5, 5);
+    expect(p.pos).toEqual({ r: 5, c: 0 }); // splashed down past the island
+    expect(p.alive).toBe(true); // swimming
+    expect(s.tiles.get(key(5, 3)).open).toBe(false); // flew over, no flips
+    expect(s.current).toBe(1);
+  });
+
+  it("W2: a shot into the own ship boards it (stashing a coin)", () => {
+    const s = blankGame();
+    setCannon(s, 11, 6, [1, 0]); // facing south, straight at the Red ship
+    s.tiles.get(key(11, 6)).open = true;
+    const p = s.pirates[0];
+    placePirate(s, p, 10, 6);
+    p.carrying = true;
+    movePirate(s, p, 11, 6);
+    expect(p.pos).toEqual({ r: 12, c: 6 });
+    expect(s.players[0].gold).toBe(1);
+  });
+
+  it("W2: a shot into the enemy ship is fatal", () => {
+    const s = blankGame();
+    setCannon(s, 1, 6, [-1, 0]); // facing north, at the Blue ship
+    const p = s.pirates[0];
+    placePirate(s, p, 2, 6);
+    movePirate(s, p, 1, 6);
+    expect(p.alive).toBe(false);
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

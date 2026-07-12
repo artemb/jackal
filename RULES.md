@@ -206,6 +206,15 @@ disagree, one of them is a bug — decide which and fix it.
   turn to revive one of its player's dead pirates. The revived pirate
   appears in that same fortress.
 
+## W. Cannons
+
+- **W1.** Every map has 2 cannon tiles, each facing one straight
+  direction fixed randomly when the map is generated.
+- **W2.** A pirate that lands on a cannon is fired in that direction: it
+  flies in a straight line over the island (without flipping tiles) and
+  arrives at the first non-island cell — the sea (overboard, O1), its own
+  ship (boards, stashing a coin) or the enemy ship (fatal, O4).
+
 ## T. Turns
 
 - **T1.** Red moves first.
