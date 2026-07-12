@@ -754,6 +754,66 @@ describe("I. Ice", () => {
   });
 });
 
+describe("N. Traps", () => {
+  const setTrap = (state, r, c) => {
+    state.tiles.get(key(r, c)).type = "trap";
+  };
+
+  it("N1: every map has 3 trap tiles", () => {
+    const s = createGame();
+    let traps = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "trap") traps++;
+    expect(traps).toBe(3);
+  });
+
+  it("N2: a lone pirate is caught; an ally stepping in frees both", () => {
+    const s = blankGame();
+    setTrap(s, 6, 6);
+    const [p, q] = s.pirates;
+    placePirate(s, p, 6, 5);
+    placePirate(s, q, 6, 7);
+
+    movePirate(s, p, 6, 6);
+    expect(p.trapped).toBe(true);
+    expect(legalMoves(s, p)).toEqual([]);
+
+    movePirate(s, q, 6, 6); // the ally steps onto the same trap
+    expect(p.trapped).toBe(false);
+    expect(q.trapped).toBe(false);
+    expect(legalMoves(s, p).length).toBeGreaterThan(0);
+    expect(legalMoves(s, q).length).toBeGreaterThan(0);
+  });
+
+  it("N2: nobody is caught when an ally already stands on the trap", () => {
+    const s = blankGame();
+    setTrap(s, 6, 6);
+    const [p, q, w] = s.pirates;
+    placePirate(s, p, 6, 5);
+    placePirate(s, q, 6, 7);
+    movePirate(s, p, 6, 6); // caught
+    movePirate(s, q, 6, 6); // frees p
+    placePirate(s, w, 5, 5);
+    movePirate(s, w, 6, 6); // two free allies are already standing there
+    expect(w.trapped).toBe(false);
+  });
+
+  it("N3: a fight on the trap frees the loser and catches the lone attacker", () => {
+    const s = blankGame();
+    setTrap(s, 6, 6);
+    const red = s.pirates[0];
+    const blue = s.pirates[3];
+    placePirate(s, blue, 6, 5);
+    movePirate(s, blue, 6, 6); // blue is caught
+    expect(blue.trapped).toBe(true);
+
+    placePirate(s, red, 6, 7);
+    movePirate(s, red, 6, 6); // red attacks the trapped blue
+    expect(blue.pos).toEqual({ r: 0, c: 6 }); // sent home...
+    expect(blue.trapped).toBe(false); // ...and no longer trapped
+    expect(red.trapped).toBe(true); // the attacker is now stuck alone
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

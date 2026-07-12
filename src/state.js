@@ -66,6 +66,9 @@ const RUM_COUNT = 4;
 // Ice tiles are slippery: the pirate slides one more cell onward.
 const ICE_COUNT = 6;
 
+// Trap tiles hold a lone pirate until an ally steps in to free it.
+const TRAP_COUNT = 3;
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -113,6 +116,9 @@ export function createGame() {
   for (let n = 0; n < ICE_COUNT; n++) {
     tiles.get(spots[spot++]).type = "ice";
   }
+  for (let n = 0; n < TRAP_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "trap";
+  }
 
   const players = [
     { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
@@ -133,6 +139,8 @@ export function createGame() {
         // rum hangover: counts down one per turn end, blocks the pirate
         // while positive (so it sits out its player's next turn)
         drunk: 0,
+        // held by a trap tile until an ally steps in
+        trapped: false,
       });
     }
   }
@@ -162,6 +170,9 @@ export function legalMoves(state, pirate) {
 
   // Sleeping off the rum: the pirate cannot move at all this turn.
   if (pirate.drunk > 0) return moves;
+
+  // Held by a trap: only an ally stepping onto the tile can free it.
+  if (pirate.trapped) return moves;
 
   const canEnterTile = (nr, nc) => {
     if (!isIsland(nr, nc)) return false;
@@ -332,6 +343,19 @@ function stepPirate(state, pirate, r, c, ctx) {
     return flipped;
   }
 
+  if (tile?.type === "trap") {
+    // Alone, the pirate is caught. With an ally already on the tile,
+    // nobody is caught and any trapped allies are pulled free.
+    const allies = piratesAt(state, r, c).filter(
+      (p) => p.player === pirate.player && p.id !== pirate.id,
+    );
+    if (allies.length > 0) {
+      for (const ally of allies) ally.trapped = false;
+    } else {
+      pirate.trapped = true;
+    }
+  }
+
   if (tile?.type === "rum") {
     // The barrel is irresistible: this pirate sits out its player's next
     // turn. drunk=3 survives exactly two turn ends (this one and the
@@ -388,6 +412,7 @@ function kill(state, pirate) {
   pirate.alive = false;
   pirate.carrying = false;
   pirate.progress = 0;
+  pirate.trapped = false;
 }
 
 // A pirate beaten in a fight retreats aboard its own ship: a carried
@@ -399,6 +424,7 @@ function sendHome(state, pirate) {
   pirate.carrying = false;
   pirate.progress = 0;
   pirate.drunk = 0;
+  pirate.trapped = false;
   pirate.pos = { ...state.players[pirate.player].ship };
 }
 

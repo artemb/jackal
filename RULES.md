@@ -154,6 +154,16 @@ disagree, one of them is a bug — decide which and fix it.
   (sea), kill it (enemy ship) or board its own ship, and ignores the
   carrying restriction C6.
 
+## N. Traps
+
+- **N1.** Every map has 3 trap tiles.
+- **N2.** A pirate that lands alone on a trap is caught: it cannot move at
+  all. An ally stepping onto the same trap tile frees it, and neither is
+  caught — a pirate is only ever caught when no ally stands on the tile.
+- **N3.** Fights still happen on traps: an attacker sends a trapped enemy
+  home (freeing it in the process, F2) and is then caught itself if it
+  ends up alone. Free actions (C3, C7) remain available while trapped.
+
 ## T. Turns
 
 - **T1.** Red moves first.

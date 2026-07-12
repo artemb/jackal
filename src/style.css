@@ -152,6 +152,11 @@ body {
   border-color: #9dc3d6;
 }
 
+.cell.tile.trap.open {
+  background: #c9bfae;
+  border-color: #9e937f;
+}
+
 .cell.tile.slow.open.jungle {
   background: #a4c17e;
   border-color: #7d9c5b;
@@ -292,6 +297,10 @@ body {
 
 .pirate.drunk {
   opacity: 0.5;
+}
+
+.pirate.trapped {
+  filter: grayscale(0.8);
 }
 
 .pirate.carrying {
