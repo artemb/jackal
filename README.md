@@ -64,6 +64,23 @@ npm run dev      # client on http://localhost:4173 (proxies /ws to the server)
 npm test         # run the rule tests
 ```
 
+## Deploying (Docker / Coolify)
+
+The repo ships a `Dockerfile` that builds the client and runs the game
+server, which serves both the static client and the WebSocket endpoint
+on a single port (3000 by default, `PORT` to override). State lives in
+memory only — no volumes, no database; a restart simply forgets running
+games. `/health` answers 200 for health checks.
+
+On Coolify: create an application from this GitHub repository with the
+Dockerfile build pack, set the exposed port to 3000, and give it a
+domain with HTTPS — the client automatically uses `wss://` behind TLS.
+
+```sh
+docker build -t jackal .
+docker run -p 3000:3000 jackal
+```
+
 ## Multiplayer
 
 The game is online multiplayer. Open the client, enter a name and create

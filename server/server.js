@@ -2,6 +2,9 @@
 // validation over WebSocket. The client renders whatever this broadcasts.
 import { createServer } from "node:http";
 import crypto from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { extname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import {
   createGame,
@@ -186,9 +189,45 @@ function handleMessage(ws, msg) {
   }
 }
 
-const httpServer = createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Jackal game server\n");
+// In production the same process serves the built client from dist/
+// (in development Vite serves the client and proxies /ws here).
+const DIST = resolve(fileURLToPath(new URL("../dist", import.meta.url)));
+const MIME = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+};
+
+const httpServer = createServer(async (req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    return res.end("ok");
+  }
+  const urlPath = decodeURIComponent(req.url.split("?")[0]);
+  const filePath = resolve(join(DIST, urlPath === "/" ? "index.html" : urlPath));
+  try {
+    if (!filePath.startsWith(DIST)) throw new Error("outside dist");
+    const data = await readFile(filePath);
+    res.writeHead(200, {
+      "Content-Type": MIME[extname(filePath)] ?? "application/octet-stream",
+    });
+    res.end(data);
+  } catch {
+    // Unknown paths get the app shell (join links are ?room=..., so this
+    // is just a safety net); no dist at all means dev mode.
+    try {
+      const data = await readFile(join(DIST, "index.html"));
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(data);
+    } catch {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("Jackal game server (no client build present)\n");
+    }
+  }
 });
 
 const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
