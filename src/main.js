@@ -155,6 +155,13 @@ function render() {
           terrainEl.textContent = "🛢️";
           cell.appendChild(terrainEl);
         }
+        if (tile.open && tile.type === "ice") {
+          cell.classList.add("ice");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = "❄️";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");

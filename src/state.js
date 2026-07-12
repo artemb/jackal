@@ -63,6 +63,9 @@ const CROC_COUNT = 4;
 // Rum tiles knock the pirate out for its player's next turn.
 const RUM_COUNT = 4;
 
+// Ice tiles are slippery: the pirate slides one more cell onward.
+const ICE_COUNT = 6;
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -106,6 +109,9 @@ export function createGame() {
   }
   for (let n = 0; n < RUM_COUNT; n++) {
     tiles.get(spots[spot++]).type = "rum";
+  }
+  for (let n = 0; n < ICE_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "ice";
   }
 
   const players = [
@@ -264,7 +270,11 @@ function stepPirate(state, pirate, r, c, ctx) {
     return false;
   }
 
-  const stayed = pirate.pos.r === r && pirate.pos.c === c;
+  // The direction this step travels in (ice keeps the pirate sliding
+  // the same way). Steps are always one cell, so dr/dc are -1..1.
+  const dr = r - pirate.pos.r;
+  const dc = c - pirate.pos.c;
+  const stayed = dr === 0 && dc === 0;
 
   // Fight: every enemy pirate standing on the destination retreats to
   // its own ship before the attacker settles in.
@@ -295,6 +305,14 @@ function stepPirate(state, pirate, r, c, ctx) {
     pirate.progress = ctx.origin.progress;
     endTurn(state);
     return flipped;
+  }
+
+  if (tile?.type === "ice") {
+    // Slippery: slide one more cell in the direction the pirate came
+    // from. Island tiles are never on the board edge, so the slide
+    // target is always on the board; stepPirate handles whatever is
+    // there (sea, ships, more ice, anything).
+    return followArrow(state, pirate, { r: r + dr, c: c + dc }, ctx) || flipped;
   }
 
   if (tile?.type === "arrow") {

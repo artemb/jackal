@@ -144,6 +144,16 @@ disagree, one of them is a bug — decide which and fix it.
   The player may still move other pirates or the ship.
 - **R3.** After sitting out that one turn the pirate moves normally again.
 
+## I. Ice
+
+- **I1.** Every map has 6 ice tiles.
+- **I2.** A pirate that enters an ice tile slides one more cell in the
+  direction it entered, as a forced move within the same turn. The slide
+  behaves like an arrow move: it flips face-down tiles, chains across
+  further ice/arrows/crocodiles/rum, can throw the pirate overboard
+  (sea), kill it (enemy ship) or board its own ship, and ignores the
+  carrying restriction C6.
+
 ## T. Turns
 
 - **T1.** Red moves first.

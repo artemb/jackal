@@ -680,6 +680,80 @@ describe("R. Rum", () => {
   });
 });
 
+describe("I. Ice", () => {
+  const setIce = (state, r, c) => {
+    state.tiles.get(key(r, c)).type = "ice";
+  };
+
+  it("I1: every map has 6 ice tiles", () => {
+    const s = createGame();
+    let ice = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "ice") ice++;
+    expect(ice).toBe(6);
+  });
+
+  it("I2: the pirate slides one more cell in its incoming direction", () => {
+    const s = blankGame();
+    setIce(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 5, 5); // approaching diagonally
+    movePirate(s, p, 6, 6);
+    expect(p.pos).toEqual({ r: 7, c: 7 }); // slid diagonally onward
+    expect(s.tiles.get(key(6, 6)).open).toBe(true);
+    expect(s.tiles.get(key(7, 7)).open).toBe(true);
+    expect(s.current).toBe(1); // one turn in total
+  });
+
+  it("I2: ice chains across further ice tiles", () => {
+    const s = blankGame();
+    setIce(s, 6, 6);
+    setIce(s, 6, 7);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6);
+    expect(p.pos).toEqual({ r: 6, c: 8 });
+  });
+
+  it("I2: sliding into the sea throws the pirate overboard", () => {
+    const s = blankGame();
+    setIce(s, 11, 4);
+    const p = s.pirates[0];
+    placePirate(s, p, 10, 4);
+    movePirate(s, p, 11, 4); // slides south into the sea at (12,4)
+    expect(p.pos).toEqual({ r: 12, c: 4 });
+    expect(p.alive).toBe(true);
+  });
+
+  it("I2: ice feeds other tiles (rum, crocodile)", () => {
+    const s = blankGame();
+    setIce(s, 6, 6);
+    s.tiles.get(key(6, 7)).type = "rum";
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6);
+    expect(p.pos).toEqual({ r: 6, c: 7 });
+    expect(p.drunk).toBeGreaterThan(0);
+
+    const s2 = blankGame();
+    setIce(s2, 6, 6);
+    s2.tiles.get(key(6, 7)).type = "croc";
+    const q = s2.pirates[0];
+    placePirate(s2, q, 6, 5);
+    movePirate(s2, q, 6, 6); // ice slides into the crocodile
+    expect(q.pos).toEqual({ r: 6, c: 5 }); // chased back to the turn origin
+  });
+
+  it("I2: an arrow can push a pirate across ice", () => {
+    const s = blankGame();
+    setArrow(s, 6, 5, [[0, 1]], { open: true });
+    setIce(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 4);
+    movePirate(s, p, 6, 5); // arrow east -> ice -> slides east
+    expect(p.pos).toEqual({ r: 6, c: 7 });
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();
