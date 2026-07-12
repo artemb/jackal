@@ -36,7 +36,8 @@ disagree, one of them is a bug — decide which and fix it.
   also step onto its own ship if the ship is on an adjacent cell.
 - **M5.** A pirate may never move onto sea cells (other than its own ship)
   or onto the enemy ship.
-- **M6.** Any number of pirates may share a cell (no combat yet).
+- **M6.** Any number of a player's own pirates may share a cell. Enemy
+  pirates never share one: arriving triggers a fight (section F).
 - **M7.** Moving a pirate spends the player's turn.
 
 ## C. Coins
@@ -123,6 +124,17 @@ disagree, one of them is a bug — decide which and fix it.
   arrow. The return does not re-trigger that cell's effect: a finished
   slow-tile crossing is restored, no arrow re-fires, and a carried coin
   stays with the pirate. The turn is spent.
+
+## F. Fighting
+
+- **F1.** A pirate that moves onto a cell holding enemy pirates (one or
+  several) sends them all back aboard their own ship. The attacker takes
+  the cell.
+- **F2.** A beaten pirate drops a carried coin on the tile where it stood
+  and loses crossing progress and any rum hangover. It is not dead.
+- **F3.** Fights happen wherever pirates meet, island or sea. The attacker
+  then experiences the tile normally (crossing, rum, etc.). The enemy
+  ship itself is not conquerable: boarding it is still fatal (O4).
 
 ## R. Rum
 

@@ -165,7 +165,7 @@ describe("M. Pirate movement", () => {
     expect(has(moves, 0, 5)).toBe(false); // sea
   });
 
-  it("M6: any number of pirates may share a cell", () => {
+  it("M6: any number of a player's own pirates may share a cell", () => {
     const s = blankGame();
     const [a, b] = s.pirates;
     movePirate(s, a, 11, 6);
@@ -581,6 +581,65 @@ describe("K. Crocodile", () => {
     movePirate(s, p, 6, 6);
     expect(p.pos).toEqual({ r: 6, c: 5 });
     expect(p.carrying).toBe(true);
+  });
+});
+
+describe("F. Fighting", () => {
+  it("F1: moving onto enemy pirates sends all of them back to their ship", () => {
+    const s = blankGame();
+    const red = s.pirates[0];
+    const [b1, b2] = [s.pirates[3], s.pirates[4]];
+    placePirate(s, b1, 6, 6);
+    placePirate(s, b2, 6, 6);
+    placePirate(s, red, 6, 5);
+
+    movePirate(s, red, 6, 6);
+    expect(red.pos).toEqual({ r: 6, c: 6 }); // the attacker holds the tile
+    expect(b1.pos).toEqual({ r: 0, c: 6 }); // both defenders retreat
+    expect(b2.pos).toEqual({ r: 0, c: 6 });
+    expect(b1.alive && b2.alive).toBe(true); // beaten, not dead
+    expect(s.current).toBe(1);
+  });
+
+  it("F2: a beaten pirate drops its coin on the tile and sobers up", () => {
+    const s = blankGame();
+    const red = s.pirates[0];
+    const blue = s.pirates[3];
+    placePirate(s, blue, 6, 6);
+    blue.carrying = true;
+    blue.drunk = 2;
+    placePirate(s, red, 6, 5);
+
+    movePirate(s, red, 6, 6);
+    expect(blue.carrying).toBe(false);
+    expect(s.tiles.get(key(6, 6)).coins).toBe(1); // the loot stays behind
+    expect(blue.drunk).toBe(0);
+  });
+
+  it("F3: the attacker still suffers the tile it conquers", () => {
+    const s = blankGame();
+    setSlow(s, 6, 6, 3, { open: true });
+    const red = s.pirates[0];
+    const blue = s.pirates[3];
+    placePirate(s, blue, 6, 6);
+    blue.progress = 3; // done crossing
+    placePirate(s, red, 6, 5);
+
+    movePirate(s, red, 6, 6);
+    expect(blue.pos).toEqual({ r: 0, c: 6 });
+    expect(red.progress).toBe(1); // the attacker starts its own crossing
+    expect(legalMoves(s, red)).toEqual([{ r: 6, c: 6 }]);
+  });
+
+  it("F3: swimmers fight in the sea too", () => {
+    const s = blankGame();
+    const red = s.pirates[0];
+    const blue = s.pirates[3];
+    red.pos = { r: 12, c: 4 };
+    blue.pos = { r: 12, c: 5 };
+    movePirate(s, red, 12, 5);
+    expect(blue.pos).toEqual({ r: 0, c: 6 }); // back aboard the Blue ship
+    expect(red.pos).toEqual({ r: 12, c: 5 });
   });
 });
 

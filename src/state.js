@@ -265,6 +265,13 @@ function stepPirate(state, pirate, r, c, ctx) {
   }
 
   const stayed = pirate.pos.r === r && pirate.pos.c === c;
+
+  // Fight: every enemy pirate standing on the destination retreats to
+  // its own ship before the attacker settles in.
+  for (const foe of piratesAt(state, r, c)) {
+    if (foe.player !== pirate.player) sendHome(state, foe);
+  }
+
   pirate.pos = { r, c };
   let flipped = false;
   const tile = state.tiles.get(key(r, c));
@@ -363,6 +370,18 @@ function kill(state, pirate) {
   pirate.alive = false;
   pirate.carrying = false;
   pirate.progress = 0;
+}
+
+// A pirate beaten in a fight retreats aboard its own ship: a carried
+// coin is dropped where it stood, crossing progress and any rum
+// hangover are gone.
+function sendHome(state, pirate) {
+  const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  if (pirate.carrying && tile) tile.coins += 1;
+  pirate.carrying = false;
+  pirate.progress = 0;
+  pirate.drunk = 0;
+  pirate.pos = { ...state.players[pirate.player].ship };
 }
 
 export function piratesAboard(state, player) {
