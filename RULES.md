@@ -164,6 +164,13 @@ disagree, one of them is a bug — decide which and fix it.
   home (freeing it in the process, F2) and is then caught itself if it
   ends up alone. Free actions (C3, C7) remain available while trapped.
 
+## P. Parachute
+
+- **P1.** Every map has 2 parachute tiles.
+- **P2.** A pirate that lands on a parachute (by any means) is flown
+  straight back aboard its own ship; a carried coin is stashed as gold
+  (C8). The tile is revealed and the turn is spent.
+
 ## T. Turns
 
 - **T1.** Red moves first.

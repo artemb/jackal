@@ -69,6 +69,9 @@ const ICE_COUNT = 6;
 // Trap tiles hold a lone pirate until an ally steps in to free it.
 const TRAP_COUNT = 3;
 
+// Parachute tiles fly the pirate straight back to its ship.
+const CHUTE_COUNT = 2;
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -118,6 +121,9 @@ export function createGame() {
   }
   for (let n = 0; n < TRAP_COUNT; n++) {
     tiles.get(spots[spot++]).type = "trap";
+  }
+  for (let n = 0; n < CHUTE_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "chute";
   }
 
   const players = [
@@ -341,6 +347,13 @@ function stepPirate(state, pirate, r, c, ctx) {
     state.pending = { pirateId: pirate.id, options, ctx };
     state.selected = { kind: "pirate", id: pirate.id };
     return flipped;
+  }
+
+  if (tile?.type === "chute") {
+    // The parachute flies the pirate straight home; boarding handles a
+    // carried coin (stashed as gold) and ends the turn.
+    const ship = state.players[pirate.player].ship;
+    return stepPirate(state, pirate, ship.r, ship.c, ctx) || flipped;
   }
 
   if (tile?.type === "trap") {

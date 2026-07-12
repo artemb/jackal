@@ -157,6 +157,11 @@ body {
   border-color: #9e937f;
 }
 
+.cell.tile.chute.open {
+  background: #e8d9f0;
+  border-color: #bfa6cf;
+}
+
 .cell.tile.slow.open.jungle {
   background: #a4c17e;
   border-color: #7d9c5b;

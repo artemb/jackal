@@ -814,6 +814,52 @@ describe("N. Traps", () => {
   });
 });
 
+describe("P. Parachute", () => {
+  const setChute = (state, r, c) => {
+    state.tiles.get(key(r, c)).type = "chute";
+  };
+
+  it("P1: every map has 2 parachute tiles", () => {
+    const s = createGame();
+    let chutes = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "chute") chutes++;
+    expect(chutes).toBe(2);
+  });
+
+  it("P2: the parachute flies the pirate straight to its ship", () => {
+    const s = blankGame();
+    setChute(s, 6, 6);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6);
+    expect(s.tiles.get(key(6, 6)).open).toBe(true); // the tile is revealed
+    expect(p.pos).toEqual({ r: 12, c: 6 }); // back aboard
+    expect(s.current).toBe(1);
+  });
+
+  it("P2: a carried coin is stashed on landing", () => {
+    const s = blankGame();
+    setChute(s, 6, 6);
+    s.tiles.get(key(6, 6)).open = true;
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    p.carrying = true;
+    movePirate(s, p, 6, 6);
+    expect(s.players[0].gold).toBe(1);
+    expect(p.carrying).toBe(false);
+  });
+
+  it("P2: arrows and ice can feed the parachute", () => {
+    const s = blankGame();
+    s.tiles.get(key(6, 6)).type = "ice";
+    setChute(s, 6, 7);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6); // slides onto the parachute
+    expect(p.pos).toEqual({ r: 12, c: 6 });
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();
