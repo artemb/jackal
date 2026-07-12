@@ -290,16 +290,33 @@ function onCellClick(r, c) {
     }
   }
 
-  // Select / cycle through the current crew's pirates on this cell.
+  // Select / cycle through the current crew's pirates on this cell;
+  // one more click after the last pirate deselects, so a change of
+  // mind is always one extra click away.
   const own = piratesAt(game, r, c).filter((p) => p.player === game.current);
-  if (own.length === 0) {
+  const idx = own.findIndex((p) => p.id === selected);
+  if (own.length === 0 || idx === own.length - 1) {
     selected = null;
   } else {
-    const idx = own.findIndex((p) => p.id === selected);
-    selected = own[(idx + 1) % own.length].id;
+    selected = own[idx + 1].id;
   }
   renderGame();
 }
+
+function deselect() {
+  if (game && !game.pending && selected != null) {
+    selected = null;
+    renderGame();
+  }
+}
+
+window.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") deselect();
+});
+boardEl.addEventListener("contextmenu", (ev) => {
+  ev.preventDefault();
+  deselect();
+});
 
 function shipAt(r, c) {
   return game.players.find((p) => p.ship.r === r && p.ship.c === c) ?? null;
@@ -489,6 +506,11 @@ function renderActions() {
       pirateId: pirate.id,
     });
   }
+
+  const btn = document.createElement("button");
+  btn.textContent = "✕ Deselect";
+  btn.addEventListener("click", deselect);
+  actionsEl.appendChild(btn);
 }
 
 function renderPresence() {
