@@ -613,22 +613,22 @@ body {
   transform: rotate(270deg);
 }
 
-.coins {
+.coin-stack {
   position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 18px;
-  height: 18px;
+  top: 2px;
+  left: 2px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.coin {
+  position: absolute;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #d9a520 url("./assets/tiles/coin.webp") center / cover;
   border: 1px solid #a87a10;
-  color: #5c3a00;
-  font-size: 12px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .pirate {
@@ -649,6 +649,33 @@ body {
 .pirate.dead {
   opacity: 0;
   pointer-events: none;
+}
+
+/* The carried coin sits on the pirate's shoulder, offset so the
+   pirate stays visible underneath. */
+.pirate .carry-coin {
+  display: none;
+  position: absolute;
+  top: -8px;
+  right: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #d9a520 url("./assets/tiles/coin.webp") center / cover;
+  border: 1px solid #a87a10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.pirate.carrying .carry-coin {
+  display: block;
+}
+
+.pirate .cross {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pirate.p1 {

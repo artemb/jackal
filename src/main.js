@@ -474,10 +474,16 @@ function renderGame() {
 
         if (tile.open) renderTileContent(cell, tile);
         if (tile.open && tile.coins > 0) {
-          const coinsEl = document.createElement("div");
-          coinsEl.className = "coins";
-          coinsEl.textContent = tile.coins;
-          cell.appendChild(coinsEl);
+          const stack = document.createElement("div");
+          stack.className = "coin-stack";
+          for (let i = 0; i < Math.min(tile.coins, 6); i++) {
+            const coin = document.createElement("span");
+            coin.className = "coin";
+            coin.style.left = `${i * 7}px`;
+            coin.style.top = `${(i % 2) * 4}px`;
+            stack.appendChild(coin);
+          }
+          cell.appendChild(stack);
         }
       } else {
         cell.classList.add("sea");
@@ -569,6 +575,7 @@ function renderPieces() {
     let el = pirateEls.get(p.id);
     if (!el) {
       el = spawnPiece(`pirate p${p.player + 1}`);
+      el.innerHTML = `<span class="cross"></span><span class="carry-coin"></span>`;
       pirateEls.set(p.id, el);
     }
     if (!p.alive) {
@@ -597,12 +604,13 @@ function renderPieces() {
     el.classList.toggle("trapped", p.trapped);
     el.classList.toggle("selected", p.id === selected);
     const under = game.tiles.get(key(p.pos.r, p.pos.c));
+    const crossEl = el.querySelector(".cross");
     if (under?.type === "slow" && p.progress < under.steps) {
       el.classList.add("crossing");
-      el.textContent = under.steps - p.progress;
+      crossEl.textContent = under.steps - p.progress;
     } else {
       el.classList.remove("crossing");
-      el.textContent = "";
+      crossEl.textContent = "";
     }
   }
 }
