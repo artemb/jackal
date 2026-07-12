@@ -2,20 +2,36 @@ import {
   SIZE,
   isIsland,
   key,
-  createGame,
+  deserializeGame,
   legalMoves,
-  movePirate,
-  piratesAt,
-  piratesAboard,
   legalShipMoves,
-  moveShip,
+  piratesAt,
   canPickUp,
-  pickUpCoin,
-  dropCoin,
-  chooseArrowMove,
   canRevive,
-  revivePirate,
 } from "./state.js";
+
+// ---------------------------------------------------------------- identity
+let myId = localStorage.getItem("jackalId");
+if (!myId) {
+  myId = crypto.randomUUID();
+  localStorage.setItem("jackalId", myId);
+}
+
+// ------------------------------------------------------------------- state
+let ws = null;
+let room = null; // latest room snapshot from the server
+let game = null; // deserialized game state (authoritative copy)
+let selected = null; // locally selected pirate id
+let flippedKeys = new Set(); // cells to play the flip animation on
+let urlRoom = new URLSearchParams(location.search).get("room");
+
+// -------------------------------------------------------------------- dom
+const $ = (id) => document.getElementById(id);
+const boardEl = $("board");
+const turnEl = $("turn-indicator");
+const scoresEl = $("scores");
+const actionsEl = $("actions");
+const bannerEl = $("conn-banner");
 
 const SLOW_GLYPHS = {
   jungle: "🌴",
@@ -35,92 +51,267 @@ const DIR_GLYPHS = {
   "-1,-1": "↖",
 };
 
-const state = createGame();
-const boardEl = document.getElementById("board");
-const turnEl = document.getElementById("turn-indicator");
-const scoresEl = document.getElementById("scores");
-const actionsEl = document.getElementById("actions");
-let justFlipped = null; // key of a cell to play the flip animation on
+// ---------------------------------------------------------------- network
+function connect() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    bannerEl.classList.add("hidden");
+    // Rejoin after a reconnect so the seat and presence come back.
+    if (room) {
+      send({ t: "join", room: room.id, clientId: myId, name: myName() });
+    }
+  };
+  ws.onmessage = (ev) => handleMessage(JSON.parse(ev.data));
+  ws.onclose = () => {
+    if (room) bannerEl.classList.remove("hidden");
+    setTimeout(connect, 2000);
+  };
+}
+
+function send(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+function sendAction(a) {
+  send({ t: "action", a });
+}
+
+function handleMessage(msg) {
+  switch (msg.t) {
+    case "joined":
+      history.replaceState(null, "", `?room=${msg.room}`);
+      break;
+    case "room":
+      room = msg;
+      renderView();
+      break;
+    case "game": {
+      const next = deserializeGame(msg.state);
+      // Animate tiles that opened since the last snapshot.
+      flippedKeys = new Set();
+      if (game) {
+        for (const [k, tile] of next.tiles) {
+          if (tile.open && !game.tiles.get(k)?.open) flippedKeys.add(k);
+        }
+      }
+      game = next;
+      if (game.pending) selected = game.pending.pirateId;
+      renderView();
+      flippedKeys = new Set();
+      break;
+    }
+    case "error":
+      showHint(msg.msg);
+      break;
+  }
+}
+
+function myName() {
+  return $("name-input").value.trim() || "Pirate";
+}
+
+function showHint(text) {
+  $("lobby-hint").textContent = text;
+  setTimeout(() => {
+    if ($("lobby-hint").textContent === text) $("lobby-hint").textContent = "";
+  }, 4000);
+}
+
+// ------------------------------------------------------------------ views
+function show(viewId) {
+  for (const v of ["view-home", "view-lobby", "view-game"]) {
+    $(v).classList.toggle("hidden", v !== viewId);
+  }
+}
+
+function renderView() {
+  if (!room) {
+    show("view-home");
+    renderHome();
+  } else if (!room.started || !game) {
+    show("view-lobby");
+    renderLobby();
+  } else {
+    show("view-game");
+    renderGame();
+  }
+}
+
+// ------------------------------------------------------------------- home
+function renderHome() {
+  const box = $("join-box");
+  if (urlRoom) {
+    box.classList.remove("hidden");
+    $("join-code").textContent = urlRoom;
+  } else {
+    box.classList.add("hidden");
+  }
+  turnEl.textContent = "";
+  scoresEl.textContent = "";
+}
+
+$("name-input").value = localStorage.getItem("jackalName") ?? "";
+$("name-input").addEventListener("change", () => {
+  localStorage.setItem("jackalName", myName());
+});
+$("create-btn").addEventListener("click", () => {
+  send({ t: "create", clientId: myId, name: myName() });
+});
+$("join-btn").addEventListener("click", () => {
+  send({ t: "join", room: urlRoom, clientId: myId, name: myName() });
+});
+
+// ------------------------------------------------------------------ lobby
+const CREW_NAMES = ["Red", "Blue", "Green", "Yellow"];
+
+function renderLobby() {
+  turnEl.textContent = "Lobby";
+  scoresEl.textContent = `Game ${room.id}`;
+  $("share-link").value = `${location.origin}/?room=${room.id}`;
+
+  const playersEl = $("lobby-players");
+  playersEl.innerHTML = "";
+  for (const p of room.players) {
+    playersEl.appendChild(playerBadge(p));
+  }
+
+  const seatsEl = $("seats");
+  seatsEl.innerHTML = "";
+  const isHost = room.host === myId;
+  room.seats.forEach((seatPid, crew) => {
+    const row = document.createElement("div");
+    row.className = "seat-row";
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background = `var(--p${crew + 1})`;
+    row.appendChild(dot);
+    row.appendChild(document.createTextNode(` ${CREW_NAMES[crew]} crew: `));
+    if (isHost) {
+      const sel = document.createElement("select");
+      const none = document.createElement("option");
+      none.value = "";
+      none.textContent = "— unassigned —";
+      sel.appendChild(none);
+      for (const p of room.players) {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (seatPid === p.id) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.addEventListener("change", () => {
+        send({ t: "seat", crew, playerId: sel.value || null });
+      });
+      row.appendChild(sel);
+    } else {
+      const holder = room.players.find((p) => p.id === seatPid);
+      row.appendChild(
+        document.createTextNode(holder ? holder.name : "— unassigned —"),
+      );
+    }
+    seatsEl.appendChild(row);
+  });
+
+  const startBtn = $("start-btn");
+  startBtn.classList.toggle("hidden", !isHost);
+}
+
+function playerBadge(p, seats = false) {
+  const el = document.createElement("div");
+  el.className = "player-badge";
+  const dot = document.createElement("span");
+  dot.className = `presence ${p.connected ? "on" : "off"}`;
+  el.appendChild(dot);
+  const name = document.createElement("span");
+  name.textContent = p.name + (p.id === room.host ? " (host)" : "");
+  if (p.id === myId) name.classList.add("me");
+  el.appendChild(name);
+  if (seats) {
+    room.seats.forEach((pid, crew) => {
+      if (pid === p.id) {
+        const chip = document.createElement("span");
+        chip.className = "dot";
+        chip.style.background = `var(--p${crew + 1})`;
+        el.appendChild(chip);
+      }
+    });
+  }
+  return el;
+}
+
+$("copy-btn").addEventListener("click", () => {
+  navigator.clipboard?.writeText($("share-link").value);
+});
+$("start-btn").addEventListener("click", () => send({ t: "start" }));
+
+// ------------------------------------------------------------------- game
+function myTurn() {
+  return game && room && room.seats[game.current] === myId;
+}
 
 function selectedPirate() {
-  if (state.selected?.kind !== "pirate") return null;
-  return state.pirates[state.selected.id];
+  return selected == null ? null : game.pirates[selected];
 }
 
-function pirateAboard(pirate) {
-  const ship = state.players[pirate.player].ship;
-  return ship.r === pirate.pos.r && ship.c === pirate.pos.c;
-}
-
-// When the selected pirate is aboard, the ship's shore moves are offered
-// alongside the disembark tile; clicking a sea cell sails the whole ship.
 function currentShipMoves() {
   const pirate = selectedPirate();
-  if (!pirate || !pirateAboard(pirate)) return [];
-  return legalShipMoves(state, state.players[pirate.player]);
+  if (!pirate) return [];
+  const crew = game.players[game.current];
+  if (pirate.pos.r !== crew.ship.r || pirate.pos.c !== crew.ship.c) return [];
+  return legalShipMoves(game, crew);
 }
 
 function currentMoves() {
   const pirate = selectedPirate();
-  if (!pirate) return [];
-  return [...legalMoves(state, pirate), ...currentShipMoves()];
-}
-
-function shipAt(r, c) {
-  return state.players.find((p) => p.ship.r === r && p.ship.c === c) ?? null;
-}
-
-function sameSelection(a, b) {
-  if (!a || !b) return false;
-  return a.kind === b.kind && a.id === b.id;
+  if (!pirate || pirate.player !== game.current) return [];
+  return [...legalMoves(game, pirate), ...currentShipMoves()];
 }
 
 function onCellClick(r, c) {
-  // A pirate mid-flight on a multi-direction arrow locks the input:
-  // the only valid clicks are the arrow's destinations.
-  if (state.pending) {
-    if (state.pending.options.some((o) => o.r === r && o.c === c)) {
-      chooseArrowMove(state, { r, c });
-      render();
+  if (!myTurn()) return;
+
+  if (game.pending) {
+    if (game.pending.options.some((o) => o.r === r && o.c === c)) {
+      sendAction({ kind: "choose", r, c });
     }
     return;
   }
 
   const pirate = selectedPirate();
-  if (pirate) {
+  if (pirate && pirate.player === game.current) {
     if (currentShipMoves().some((m) => m.r === r && m.c === c)) {
-      moveShip(state, state.players[pirate.player], r, c);
-      justFlipped = null;
-      render();
+      sendAction({ kind: "ship", r, c });
       return;
     }
-    if (legalMoves(state, pirate).some((m) => m.r === r && m.c === c)) {
-      const flipped = movePirate(state, pirate, r, c);
-      justFlipped = flipped ? key(r, c) : null;
-      render();
-      justFlipped = null;
+    if (legalMoves(game, pirate).some((m) => m.r === r && m.c === c)) {
+      sendAction({ kind: "move", pirateId: pirate.id, r, c });
       return;
     }
   }
 
-  // Select one of the current player's pirates on this cell; clicking
-  // again cycles when several share the cell.
-  const options = piratesAt(state, r, c)
-    .filter((p) => p.player === state.current)
-    .map((p) => ({ kind: "pirate", id: p.id }));
-
-  if (options.length === 0) {
-    state.selected = null;
+  // Select / cycle through the current crew's pirates on this cell.
+  const own = piratesAt(game, r, c).filter((p) => p.player === game.current);
+  if (own.length === 0) {
+    selected = null;
   } else {
-    const idx = options.findIndex((o) => sameSelection(o, state.selected));
-    state.selected = options[(idx + 1) % options.length];
+    const idx = own.findIndex((p) => p.id === selected);
+    selected = own[(idx + 1) % own.length].id;
   }
-  render();
+  renderGame();
 }
 
-function render() {
-  const moves = state.pending ? state.pending.options : currentMoves();
-  const moveClass = state.pending ? "arrow-target" : "move-target";
+function shipAt(r, c) {
+  return game.players.find((p) => p.ship.r === r && p.ship.c === c) ?? null;
+}
+
+function renderGame() {
+  // Drop a stale selection from an earlier turn.
+  const sel = selectedPirate();
+  if (sel && (!sel.alive || sel.player !== game.current)) selected = null;
+
+  const moves = game.pending ? game.pending.options : currentMoves();
+  const moveClass = game.pending ? "arrow-target" : "move-target";
   boardEl.innerHTML = "";
 
   for (let r = 0; r < SIZE; r++) {
@@ -129,100 +320,11 @@ function render() {
       cell.className = "cell";
 
       if (isIsland(r, c)) {
-        const tile = state.tiles.get(key(r, c));
+        const tile = game.tiles.get(key(r, c));
         cell.classList.add("tile", tile.open ? "open" : "closed");
-        if (justFlipped === key(r, c)) cell.classList.add("flipping");
-        if (tile.open && tile.type === "slow") {
-          cell.classList.add("slow", tile.slow);
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = SLOW_GLYPHS[tile.slow];
-          cell.appendChild(terrainEl);
-          const stepsEl = document.createElement("div");
-          stepsEl.className = "steps";
-          stepsEl.textContent = tile.steps;
-          cell.appendChild(stepsEl);
-        }
-        if (tile.open && tile.type === "croc") {
-          cell.classList.add("croc");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "🐊";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "rum") {
-          cell.classList.add("rum");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "🛢️";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "ice") {
-          cell.classList.add("ice");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "❄️";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "trap") {
-          cell.classList.add("trap");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "🕸️";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "chute") {
-          cell.classList.add("chute");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "🪂";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "horse") {
-          cell.classList.add("horse");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "🐎";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "cannibal") {
-          cell.classList.add("cannibal");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = "💀";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && (tile.type === "fort" || tile.type === "native")) {
-          cell.classList.add("fort");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = tile.type === "native" ? "💃" : "🏰";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "plane") {
-          cell.classList.add("plane");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          if (tile.used) terrainEl.classList.add("spent");
-          terrainEl.textContent = "✈️";
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "cannon") {
-          cell.classList.add("cannon");
-          const terrainEl = document.createElement("div");
-          terrainEl.className = "terrain";
-          terrainEl.textContent = `💣${DIR_GLYPHS[tile.dir.join(",")]}`;
-          cell.appendChild(terrainEl);
-        }
-        if (tile.open && tile.type === "arrow") {
-          cell.classList.add("arrow");
-          const arrowsEl = document.createElement("div");
-          arrowsEl.className = "arrows";
-          arrowsEl.textContent = tile.dirs
-            .map((d) => DIR_GLYPHS[d.join(",")])
-            .join("");
-          cell.appendChild(arrowsEl);
-        }
+        if (flippedKeys.has(key(r, c))) cell.classList.add("flipping");
+
+        if (tile.open) renderTileContent(cell, tile);
         if (tile.open && tile.coins > 0) {
           const coinsEl = document.createElement("div");
           coinsEl.className = "coins";
@@ -241,7 +343,7 @@ function render() {
         cell.appendChild(shipEl);
       }
 
-      const here = piratesAt(state, r, c);
+      const here = piratesAt(game, r, c);
       if (here.length > 0) {
         const group = document.createElement("div");
         group.className = "pirates";
@@ -251,11 +353,11 @@ function render() {
           if (p.carrying) el.classList.add("carrying");
           if (p.drunk > 0) el.classList.add("drunk");
           if (p.trapped) el.classList.add("trapped");
-          if (selectedPirate()?.id === p.id) el.classList.add("selected");
+          if (p.id === selected) el.classList.add("selected");
           group.appendChild(el);
         }
         cell.appendChild(group);
-        if (here.some((p) => p.player === state.current)) {
+        if (myTurn() && here.some((p) => p.player === game.current)) {
           cell.classList.add("selectable");
         }
       }
@@ -269,90 +371,134 @@ function render() {
     }
   }
 
-  const player = state.players[state.current];
+  renderStatus();
+  renderActions();
+  renderPresence();
+}
+
+function renderTileContent(cell, tile) {
+  const add = (cls, text) => {
+    cell.classList.add(cls);
+    const el = document.createElement("div");
+    el.className = "terrain";
+    el.textContent = text;
+    if (tile.type === "plane" && tile.used) el.classList.add("spent");
+    cell.appendChild(el);
+  };
+  if (tile.type === "slow") {
+    cell.classList.add(tile.slow);
+    add("slow", SLOW_GLYPHS[tile.slow]);
+    const stepsEl = document.createElement("div");
+    stepsEl.className = "steps";
+    stepsEl.textContent = tile.steps;
+    cell.appendChild(stepsEl);
+  } else if (tile.type === "croc") add("croc", "🐊");
+  else if (tile.type === "rum") add("rum", "🛢️");
+  else if (tile.type === "ice") add("ice", "❄️");
+  else if (tile.type === "trap") add("trap", "🕸️");
+  else if (tile.type === "chute") add("chute", "🪂");
+  else if (tile.type === "horse") add("horse", "🐎");
+  else if (tile.type === "cannibal") add("cannibal", "💀");
+  else if (tile.type === "fort") add("fort", "🏰");
+  else if (tile.type === "native") add("fort", "💃");
+  else if (tile.type === "plane") add("plane", "✈️");
+  else if (tile.type === "cannon") {
+    add("cannon", `💣${DIR_GLYPHS[tile.dir.join(",")]}`);
+  } else if (tile.type === "arrow") {
+    cell.classList.add("arrow");
+    const el = document.createElement("div");
+    el.className = "arrows";
+    el.textContent = tile.dirs.map((d) => DIR_GLYPHS[d.join(",")]).join("");
+    cell.appendChild(el);
+  }
+}
+
+function renderStatus() {
+  const crew = game.players[game.current];
+  const controller = room.players.find((p) => p.id === room.seats[crew.id]);
   turnEl.innerHTML = "";
   const dot = document.createElement("span");
   dot.className = "dot";
-  dot.style.background = `var(--p${player.id + 1})`;
+  dot.style.background = `var(--p${crew.id + 1})`;
   turnEl.appendChild(dot);
-  turnEl.appendChild(document.createTextNode(`${player.name}'s turn`));
+  const who = controller ? ` — ${controller.name}` : "";
+  turnEl.appendChild(
+    document.createTextNode(
+      `${crew.name}'s turn${who}${myTurn() ? " (you)" : ""}`,
+    ),
+  );
 
-  scoresEl.textContent = state.players
+  scoresEl.textContent = game.players
     .map((p) => `${p.name} 🪙 ${p.gold}`)
     .join("  ·  ");
-
-  renderActions();
 }
 
 function renderActions() {
   actionsEl.innerHTML = "";
-  if (state.pending) {
+  if (game.pending) {
     const hint = document.createElement("span");
     hint.className = "hint";
-    hint.textContent = "Arrow! Choose where the pirate flies.";
+    hint.textContent = myTurn()
+      ? "Forced move! Choose where the pirate goes."
+      : "Waiting for the forced-move choice…";
     actionsEl.appendChild(hint);
     return;
   }
+  if (!myTurn()) return;
   const pirate = selectedPirate();
-  if (!pirate || pirate.player !== state.current) return;
+  if (!pirate || pirate.player !== game.current) return;
+
+  const addHint = (text) => {
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = text;
+    actionsEl.appendChild(hint);
+  };
+  const addButton = (text, action) => {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.addEventListener("click", () => sendAction(action));
+    actionsEl.appendChild(btn);
+  };
 
   if (pirate.drunk > 0) {
-    const hint = document.createElement("span");
-    hint.className = "hint";
-    hint.textContent = "This pirate is sleeping off the rum this turn.";
-    actionsEl.appendChild(hint);
+    addHint("This pirate is sleeping off the rum this turn.");
     return;
   }
-
   if (pirate.trapped) {
-    const hint = document.createElement("span");
-    hint.className = "hint";
-    hint.textContent =
-      "Trapped! An ally must step onto this tile to free the pirate.";
-    actionsEl.appendChild(hint);
+    addHint("Trapped! An ally must step onto this tile to free the pirate.");
     return;
   }
 
-  const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  const tile = game.tiles.get(key(pirate.pos.r, pirate.pos.c));
   if (tile?.type === "slow" && pirate.progress < tile.steps) {
     const left = tile.steps - pirate.progress;
-    const hint = document.createElement("span");
-    hint.className = "hint";
-    hint.textContent = `Crossing the ${tile.slow}: ${left} more turn${
-      left > 1 ? "s" : ""
-    } on this tile.`;
-    actionsEl.appendChild(hint);
+    addHint(
+      `Crossing the ${tile.slow}: ${left} more turn${left > 1 ? "s" : ""} on this tile.`,
+    );
   }
-
-  if (canPickUp(state, pirate)) {
-    const btn = document.createElement("button");
-    btn.textContent = "Pick up coin";
-    btn.addEventListener("click", () => {
-      pickUpCoin(state, pirate);
-      render();
-    });
-    actionsEl.appendChild(btn);
+  if (canPickUp(game, pirate)) {
+    addButton("Pick up coin", { kind: "pickup", pirateId: pirate.id });
   }
-
   if (pirate.carrying) {
-    const btn = document.createElement("button");
-    btn.textContent = "Drop coin";
-    btn.addEventListener("click", () => {
-      dropCoin(state, pirate);
-      render();
-    });
-    actionsEl.appendChild(btn);
+    addButton("Drop coin", { kind: "drop", pirateId: pirate.id });
   }
-
-  if (canRevive(state, pirate)) {
-    const btn = document.createElement("button");
-    btn.textContent = "Revive a fallen pirate (spends the turn)";
-    btn.addEventListener("click", () => {
-      revivePirate(state, pirate);
-      render();
+  if (canRevive(game, pirate)) {
+    addButton("Revive a fallen pirate (spends the turn)", {
+      kind: "revive",
+      pirateId: pirate.id,
     });
-    actionsEl.appendChild(btn);
   }
 }
 
-render();
+function renderPresence() {
+  const el = $("game-players");
+  el.innerHTML = "";
+  for (const p of room.players) {
+    el.appendChild(playerBadge(p, true));
+  }
+}
+
+// ------------------------------------------------------------------- boot
+renderView();
+connect();

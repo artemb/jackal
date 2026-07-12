@@ -5,8 +5,9 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
 ## Current state (iteration 2)
 
 - 13×13 board: a ring of sea around an island of 117 face-down tiles.
-- Two ships on opposite sides of the island (Red at the bottom, Blue at
-  the top), each with three pirates starting aboard.
+- Four crews with ships on all four sides (Red, Blue, Green, Yellow),
+  each with three pirates starting aboard; team assignment decides who
+  is allied with whom (2, 3 or 4 players).
 - Turn-based play: click one of your pirates to select it (click again to
   cycle when several share a cell), then click a highlighted cell to move.
 - Pirates disembark straight ahead from the ship; on land they move one
@@ -58,9 +59,22 @@ against those numbered rules.
 
 ```sh
 npm install
-npm run dev   # serves on http://localhost:4173
-npm test      # run the rule tests
+npm run server   # authoritative game server on :4174 (WebSocket)
+npm run dev      # client on http://localhost:4173 (proxies /ws to the server)
+npm test         # run the rule tests
 ```
+
+## Multiplayer
+
+The game is online multiplayer. Open the client, enter a name and create
+a game — you get a shareable link (`/?room=CODE`). Friends open the link
+and join the lobby. The host assigns the four crews (Red, Blue, Green,
+Yellow) to connected players — crews controlled by the same player are
+allies, so two players take two opposite crews each — and starts the
+game. The server owns the game state and validates every action; clients
+just render and submit moves. Presence is live: everyone sees who is
+connected, and players who drop off are marked until they reconnect
+(same browser re-joins into its seat automatically).
 
 ## Planned next
 

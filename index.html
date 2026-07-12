@@ -13,10 +13,53 @@
         <div id="turn-indicator"></div>
         <div id="scores"></div>
       </header>
-      <div id="actions"></div>
-      <main id="board-wrap">
-        <div id="board"></div>
-      </main>
+
+      <div id="conn-banner" class="hidden">Connection lost — reconnecting…</div>
+
+      <section id="view-home" class="view">
+        <div class="panel">
+          <label>
+            Your name
+            <input id="name-input" maxlength="20" placeholder="Pirate name" />
+          </label>
+          <button id="create-btn">Create a game</button>
+          <div id="join-box" class="hidden">
+            <p>You were invited to game <b id="join-code"></b>.</p>
+            <button id="join-btn">Join the game</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-lobby" class="view hidden">
+        <div class="panel">
+          <p>
+            Share this link with your friends:
+            <input id="share-link" readonly />
+            <button id="copy-btn">Copy</button>
+          </p>
+          <div id="lobby-players"></div>
+          <div id="seats"></div>
+          <p class="note">
+            Crews controlled by the same player are allies. With two players
+            give each two opposite crews.
+          </p>
+          <button id="start-btn" class="hidden">Start the game</button>
+          <p id="lobby-hint" class="note"></p>
+        </div>
+      </section>
+
+      <section id="view-game" class="view hidden">
+        <div id="game-layout">
+          <main id="board-wrap">
+            <div id="actions"></div>
+            <div id="board"></div>
+          </main>
+          <aside id="sidebar">
+            <h2>Players</h2>
+            <div id="game-players"></div>
+          </aside>
+        </div>
+      </section>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

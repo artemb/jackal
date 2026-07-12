@@ -60,13 +60,155 @@ body {
 }
 
 #board {
+  --cell: clamp(32px, min(6vh, 6vw), 62px);
   display: grid;
-  grid-template-columns: repeat(13, var(--cell, 48px));
-  grid-template-rows: repeat(13, var(--cell, 48px));
+  grid-template-columns: repeat(13, var(--cell));
+  grid-template-rows: repeat(13, var(--cell));
   gap: 2px;
   padding: 8px;
   background: #082c42;
   border-radius: 8px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#conn-banner {
+  background: #a33;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 6px;
+}
+
+.view {
+  display: flex;
+  justify-content: center;
+}
+
+.panel {
+  background: #0a3350;
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 340px;
+  max-width: 520px;
+}
+
+.panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel input,
+.panel select {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #2a5d84;
+  background: #0d3b57;
+  color: #f3e9d2;
+}
+
+#share-link {
+  width: 260px;
+}
+
+.panel button,
+#start-btn {
+  font-family: inherit;
+  font-size: 16px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #a87a10;
+  background: linear-gradient(#ffe08a, #d9a520);
+  color: #4a2f00;
+  cursor: pointer;
+}
+
+.note {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.seat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.seat-row .dot,
+#turn-indicator .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 2px solid #f3e9d2;
+}
+
+.player-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.player-badge .me {
+  font-weight: bold;
+}
+
+.player-badge .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.presence {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.presence.on {
+  background: #4cc36a;
+  box-shadow: 0 0 4px #4cc36a;
+}
+
+.presence.off {
+  background: #b33;
+}
+
+#game-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+#board-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+#sidebar {
+  background: #0a3350;
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 180px;
+}
+
+#sidebar h2 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
 }
 
 .cell {

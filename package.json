@@ -7,10 +7,14 @@
     "dev": "vite --port 4173",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "server": "node server/server.js"
   },
   "devDependencies": {
     "vite": "^6.3.5",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "ws": "^8.21.0"
   }
 }

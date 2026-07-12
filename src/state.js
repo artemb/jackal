@@ -584,6 +584,48 @@ export function chooseArrowMove(state, target) {
   followArrow(state, pirate, target, pending.ctx);
 }
 
+// Wire format: plain JSON-able snapshot of a game (Maps and Sets
+// expanded). The client deserializes it and reuses the same rule
+// functions for highlighting; the server state stays authoritative.
+export function serializeGame(state) {
+  return {
+    tiles: [...state.tiles.entries()],
+    players: state.players,
+    pirates: state.pirates,
+    current: state.current,
+    pending: state.pending
+      ? {
+          pirateId: state.pending.pirateId,
+          options: state.pending.options,
+          ctx: {
+            origin: state.pending.ctx.origin,
+            visited: [...state.pending.ctx.visited],
+          },
+        }
+      : null,
+  };
+}
+
+export function deserializeGame(data) {
+  return {
+    tiles: new Map(data.tiles),
+    players: data.players,
+    pirates: data.pirates,
+    current: data.current,
+    selected: null,
+    pending: data.pending
+      ? {
+          pirateId: data.pending.pirateId,
+          options: data.pending.options,
+          ctx: {
+            origin: data.pending.ctx.origin,
+            visited: new Set(data.pending.ctx.visited),
+          },
+        }
+      : null,
+  };
+}
+
 export function piratesAt(state, r, c) {
   return state.pirates.filter(
     (p) => p.alive && p.pos.r === r && p.pos.c === c,
