@@ -524,6 +524,66 @@ describe("D. Slow tiles", () => {
   });
 });
 
+describe("K. Crocodile", () => {
+  const setCroc = (state, r, c) => {
+    state.tiles.get(key(r, c)).type = "croc";
+  };
+
+  it("K1: every map has 4 crocodile tiles", () => {
+    const s = createGame();
+    let crocs = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "croc") crocs++;
+    expect(crocs).toBe(4);
+  });
+
+  it("K2: landing on a crocodile flips it and sends the pirate back", () => {
+    const s = blankGame();
+    setCroc(s, 11, 6);
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6); // disembark straight into the crocodile
+    expect(s.tiles.get(key(11, 6)).open).toBe(true);
+    expect(p.pos).toEqual({ r: 12, c: 6 }); // back aboard the ship
+    expect(s.current).toBe(1); // the turn is still spent
+  });
+
+  it("K2: an arrow chain into a crocodile returns the pirate to where the turn began", () => {
+    const s = blankGame();
+    setArrow(s, 11, 6, [[-1, 0]]);
+    setCroc(s, 10, 6);
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6); // ship -> arrow -> crocodile
+    expect(p.pos).toEqual({ r: 12, c: 6 }); // not stranded on the arrow
+    expect(s.pending).toBe(null);
+    expect(s.current).toBe(1);
+  });
+
+  it("K2: a finished slow-tile crossing survives the bounce", () => {
+    const s = blankGame();
+    setSlow(s, 6, 6, 2);
+    setCroc(s, 6, 7);
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    movePirate(s, p, 6, 6); // enter the jungle
+    movePirate(s, p, 6, 6); // finish crossing
+    movePirate(s, p, 6, 7); // step onto the crocodile
+    expect(p.pos).toEqual({ r: 6, c: 6 }); // chased back onto the jungle
+    expect(p.progress).toBe(2); // crossing still complete
+    expect(legalMoves(s, p).length).toBeGreaterThan(1); // free to move again
+  });
+
+  it("K2: a carried coin stays with the bounced pirate", () => {
+    const s = blankGame();
+    setCroc(s, 6, 6);
+    s.tiles.get(key(6, 6)).open = true;
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    p.carrying = true;
+    movePirate(s, p, 6, 6);
+    expect(p.pos).toEqual({ r: 6, c: 5 });
+    expect(p.carrying).toBe(true);
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

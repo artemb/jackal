@@ -57,6 +57,9 @@ export const SLOW_TILES = [
   { slow: "mountain", steps: 5, count: 1 },
 ];
 
+// Crocodile tiles chase the pirate back to where it came from.
+const CROC_COUNT = 4;
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -94,6 +97,9 @@ export function createGame() {
       tile.slow = slow;
       tile.steps = steps;
     }
+  }
+  for (let n = 0; n < CROC_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "croc";
   }
 
   const players = [
@@ -226,10 +232,17 @@ function endTurn(state) {
 // state.pending is set and chooseArrowMove must be called. The turn ends
 // once the chain settles.
 export function movePirate(state, pirate, r, c) {
-  return stepPirate(state, pirate, r, c, new Set());
+  // ctx follows the whole move, including arrow chains: origin is where
+  // the pirate stood when the turn began (the crocodile sends it back
+  // there), visited guards against arrow loops.
+  const ctx = {
+    origin: { pos: { ...pirate.pos }, progress: pirate.progress },
+    visited: new Set(),
+  };
+  return stepPirate(state, pirate, r, c, ctx);
 }
 
-function stepPirate(state, pirate, r, c, visited) {
+function stepPirate(state, pirate, r, c, ctx) {
   if (isEnemyShip(state, pirate.player, r, c)) {
     kill(state, pirate);
     endTurn(state);
@@ -252,19 +265,29 @@ function stepPirate(state, pirate, r, c, visited) {
     pirate.carrying = false; // the coin sinks
   }
 
+  if (tile?.type === "croc") {
+    // The crocodile chases the pirate back to where its turn started,
+    // without re-triggering that cell's effect. Crossing progress on a
+    // slow tile it had left is restored.
+    pirate.pos = { ...ctx.origin.pos };
+    pirate.progress = ctx.origin.progress;
+    endTurn(state);
+    return flipped;
+  }
+
   if (tile?.type === "arrow") {
-    if (visited.has(key(r, c))) {
+    if (ctx.visited.has(key(r, c))) {
       // Arrow loop within one turn: the pirate dies.
       kill(state, pirate);
       endTurn(state);
       return flipped;
     }
-    visited.add(key(r, c));
+    ctx.visited.add(key(r, c));
     const options = tile.dirs.map(([dr, dc]) => ({ r: r + dr, c: c + dc }));
     if (options.length === 1) {
-      return followArrow(state, pirate, options[0], visited) || flipped;
+      return followArrow(state, pirate, options[0], ctx) || flipped;
     }
-    state.pending = { pirateId: pirate.id, options, visited };
+    state.pending = { pirateId: pirate.id, options, ctx };
     state.selected = { kind: "pirate", id: pirate.id };
     return flipped;
   }
@@ -280,8 +303,8 @@ function stepPirate(state, pirate, r, c, visited) {
 
 // Arrow targets are always on the board; stepPirate handles every kind
 // of cell (island, sea, either ship).
-function followArrow(state, pirate, target, visited) {
-  return stepPirate(state, pirate, target.r, target.c, visited);
+function followArrow(state, pirate, target, ctx) {
+  return stepPirate(state, pirate, target.r, target.c, ctx);
 }
 
 // Resolve a pending multi-direction arrow by picking one of its options.
@@ -293,7 +316,7 @@ export function chooseArrowMove(state, target) {
   }
   const pirate = state.pirates[pending.pirateId];
   state.pending = null;
-  followArrow(state, pirate, target, pending.visited);
+  followArrow(state, pirate, target, pending.ctx);
 }
 
 export function piratesAt(state, r, c) {

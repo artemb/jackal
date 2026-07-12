@@ -114,6 +114,16 @@ disagree, one of them is a bug — decide which and fix it.
   there; the landing counts as the first turn and any arrow chain ends.
 - **D5.** Free actions (C3, C7) remain available while crossing.
 
+## K. Crocodile
+
+- **K1.** Every map has 4 crocodile tiles.
+- **K2.** A pirate that lands on a crocodile (by a normal move or through
+  an arrow chain) flips the tile, then is chased back to the cell it
+  occupied when the turn began — never left stranded mid-chain on an
+  arrow. The return does not re-trigger that cell's effect: a finished
+  slow-tile crossing is restored, no arrow re-fires, and a carried coin
+  stays with the pirate. The turn is spent.
+
 ## T. Turns
 
 - **T1.** Red moves first.

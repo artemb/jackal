@@ -141,6 +141,13 @@ function render() {
           stepsEl.textContent = tile.steps;
           cell.appendChild(stepsEl);
         }
+        if (tile.open && tile.type === "croc") {
+          cell.classList.add("croc");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = "🐊";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");

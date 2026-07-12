@@ -36,6 +36,8 @@ A web-based version of the pirate board game **Jackal**, built incrementally.
   1 mountain (5). Crossing takes that many turns — entering counts as the
   first, then the pirate steps in place (click its own tile) until the
   crossing is done.
+- Crocodiles: 4 tiles that chase the pirate straight back to where its
+  turn began, spending the turn.
 
 The full rule set lives in [RULES.md](RULES.md) — tests are written
 against those numbered rules.
