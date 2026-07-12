@@ -209,6 +209,26 @@ describe("C. Coins", () => {
     expect(canPickUp(s, p)).toBe(false); // C4: already carrying
   });
 
+  it("C9: ending a move on coins picks one up automatically", () => {
+    const s = blankGame();
+    const p = s.pirates[0];
+    placePirate(s, p, 6, 5);
+    const stash = s.tiles.get(key(6, 6));
+    stash.open = true;
+    stash.coins = 2;
+    movePirate(s, p, 6, 6);
+    expect(p.carrying).toBe(true);
+    expect(stash.coins).toBe(1);
+
+    // already carrying: the second coin stays put
+    s.current = 0;
+    s.tiles.get(key(6, 5)).open = true;
+    movePirate(s, p, 6, 5);
+    s.current = 0;
+    movePirate(s, p, 6, 6);
+    expect(stash.coins).toBe(1);
+  });
+
   it("C5: the carried coin moves with the pirate", () => {
     const s = blankGame();
     const p = s.pirates[0];
@@ -603,7 +623,7 @@ describe("F. Fighting", () => {
     expect(s.current).not.toBe(0);
   });
 
-  it("F2: a beaten pirate drops its coin on the tile and sobers up", () => {
+  it("F2: a beaten pirate drops its coin, which the attacker grabs", () => {
     const s = blankGame();
     const red = s.pirates[0];
     const blue = s.pirates[3];
@@ -614,8 +634,9 @@ describe("F. Fighting", () => {
 
     movePirate(s, red, 6, 6);
     expect(blue.carrying).toBe(false);
-    expect(s.tiles.get(key(6, 6)).coins).toBe(1); // the loot stays behind
     expect(blue.drunk).toBe(0);
+    expect(red.carrying).toBe(true); // auto-picked the dropped loot (C3)
+    expect(s.tiles.get(key(6, 6)).coins).toBe(0);
   });
 
   it("F3: the attacker still suffers the tile it conquers", () => {

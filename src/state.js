@@ -519,6 +519,7 @@ function stepPirate(state, pirate, r, c, ctx) {
     // slow tile it had left is restored.
     pirate.pos = { ...ctx.origin.pos };
     pirate.progress = ctx.origin.progress;
+    autoPickUp(state, pirate);
     endTurn(state);
     return flipped;
   }
@@ -608,8 +609,20 @@ function stepPirate(state, pirate, r, c, ctx) {
   pirate.progress =
     tile?.type === "slow" ? (stayed ? pirate.progress + 1 : 1) : 0;
 
+  autoPickUp(state, pirate);
   endTurn(state);
   return flipped;
+}
+
+// A pirate that comes to rest on a tile with coins grabs one
+// automatically (it can still be dropped as a free action).
+function autoPickUp(state, pirate) {
+  if (!pirate.alive || pirate.carrying) return;
+  const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  if (tile && tile.coins > 0) {
+    tile.coins -= 1;
+    pirate.carrying = true;
+  }
 }
 
 // Arrow targets are always on the board; stepPirate handles every kind

@@ -60,9 +60,10 @@ disagree, one of them is a bug — decide which and fix it.
   2 tiles with 4 coins and 1 tile with 5 coins (31 coins total).
 - **C2.** Coins on a tile are hidden until the tile is discovered, then
   shown as a counter on the tile.
-- **C3.** A pirate standing on a discovered tile with at least one coin may
-  pick up exactly one coin. Picking up is a free action (does not spend
-  the turn).
+- **C3.** A pirate that ends its move on a tile with coins automatically
+  picks one up (if it is not already carrying). A pirate standing on
+  coins without carrying (e.g. after dropping) may also pick one up
+  manually as a free action (does not spend the turn).
 - **C4.** A pirate carries at most one coin at a time.
 - **C5.** A carried coin moves with the pirate on every move.
 - **C6.** A pirate carrying a coin may only move to already discovered
