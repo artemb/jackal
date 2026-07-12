@@ -126,9 +126,24 @@ export function chooseBotAction(state, crewId, { noise = 3 } = {}) {
   const rand = () => (Math.random() * 2 - 1) * noise;
   let best = null;
 
-  const consider = (candidate, sim) => {
+  const consider = (candidate, sim, before = null) => {
     const done = settled(sim, crewId, 2);
-    const score = evaluate(done, crewId) + rand();
+    let score = evaluate(done, crewId) + rand();
+    // A move that ends where it started with nothing gained (e.g. an
+    // arrow bouncing the pirate straight back) wastes the turn — punish
+    // it so the bot routes around instead of stalling forever.
+    if (before) {
+      const after = done.pirates[before.id];
+      if (
+        after.alive &&
+        after.pos.r === before.pos.r &&
+        after.pos.c === before.pos.c &&
+        after.progress <= before.progress &&
+        after.carrying === before.carrying
+      ) {
+        score -= 25;
+      }
+    }
     if (!best || score > best.score) best = { ...candidate, score };
   };
 
@@ -142,12 +157,19 @@ export function chooseBotAction(state, crewId, { noise = 3 } = {}) {
       const sp = preSim.pirates[p.id];
       if (pre === "pickup") pickUpCoin(preSim, sp);
       if (pre === "drop") dropCoin(preSim, sp);
+      const before = {
+        id: p.id,
+        pos: { ...sp.pos },
+        progress: sp.progress,
+        carrying: sp.carrying,
+      };
       for (const mv of legalMoves(preSim, sp)) {
         const sim = cloneMasked(preSim);
         movePirate(sim, sim.pirates[p.id], mv.r, mv.c);
         consider(
           { pre, action: { kind: "move", pirateId: p.id, r: mv.r, c: mv.c } },
           sim,
+          before,
         );
       }
     }

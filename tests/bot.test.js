@@ -105,6 +105,31 @@ describe("Bot", () => {
     expect(pick.pre).toBe("pickup");
   });
 
+  it("does not stall on an arrow that bounces it straight back", () => {
+    const s = blankGame();
+    const p = s.pirates[0];
+    p.pos = { r: 8, c: 6 };
+    s.tiles.get(key(8, 6)).open = true;
+    p.carrying = true;
+    // the only discovered way onward is an arrow pointing straight back
+    const arrow = s.tiles.get(key(9, 6));
+    arrow.type = "arrow";
+    arrow.dirs = [[-1, 0]];
+    arrow.open = true;
+    for (const q of s.pirates) if (q.id !== p.id && q.player === 0) q.alive = false;
+
+    for (let run = 0; run < 5; run++) {
+      const pick = chooseBotAction(s, 0, QUIET);
+      // anything but the pointless bounce: drop-and-explore, etc.
+      const bounce =
+        pick.action.kind === "move" &&
+        pick.action.r === 9 &&
+        pick.action.c === 6 &&
+        pick.pre !== "drop";
+      expect(bounce).toBe(false);
+    }
+  });
+
   it("plays a full four-bot game segment without breaking the rules engine", () => {
     const s = createGame({ teams: [0, 1, 2, 3] });
     let acted = 0;
