@@ -24,6 +24,13 @@ let game = null; // deserialized game state (authoritative copy)
 let selected = null; // locally selected pirate id
 let flippedKeys = new Set(); // cells to play the flip animation on
 let logEntries = []; // game history from the server
+
+// Pieces (ships, pirates) live in a persistent overlay above the grid
+// and are moved by CSS transform, so movement animates instead of
+// snapping when a new state arrives.
+let cellEls = []; // cellEls[r][c] -> grid cell element
+const shipEls = new Map(); // crew id -> element
+const pirateEls = new Map(); // pirate id -> element
 let urlRoom = new URLSearchParams(location.search).get("room");
 
 // -------------------------------------------------------------------- dom
@@ -441,8 +448,10 @@ function renderGame() {
   const moves = game.pending ? game.pending.options : currentMoves();
   const moveClass = game.pending ? "arrow-target" : "move-target";
   boardEl.innerHTML = "";
+  cellEls = [];
 
   for (let r = 0; r < SIZE; r++) {
+    cellEls.push([]);
     for (let c = 0; c < SIZE; c++) {
       const cell = document.createElement("div");
       cell.className = "cell";
@@ -468,40 +477,16 @@ function renderGame() {
 
       const ship = shipAt(r, c);
       if (ship) {
-        const shipEl = document.createElement("div");
-        shipEl.className = `ship p${ship.id + 1}`;
-        shipEl.textContent = "⛵";
-        if (ship.id === game.current && game.winner === null) {
-          shipEl.classList.add("active");
-        }
-        cell.appendChild(shipEl);
         cell.title = `${ship.name}'s ship — pirates disembark straight ahead; sailing needs a pirate aboard. Boarding a friendly ship stashes a carried coin; an enemy ship is fatal.`;
       }
 
       const here = piratesAt(game, r, c);
-      if (here.length > 0) {
-        const group = document.createElement("div");
-        group.className = "pirates";
-        for (const p of here) {
-          const el = document.createElement("div");
-          el.className = `pirate p${p.player + 1}`;
-          if (p.carrying) el.classList.add("carrying");
-          if (p.drunk > 0) el.classList.add("drunk");
-          if (p.trapped) el.classList.add("trapped");
-          if (p.id === selected) el.classList.add("selected");
-          // Mid-crossing on a slow tile: show the turns this pirate
-          // still needs before it can move on.
-          const under = game.tiles.get(key(r, c));
-          if (under?.type === "slow" && p.progress < under.steps) {
-            el.classList.add("crossing");
-            el.textContent = under.steps - p.progress;
-          }
-          group.appendChild(el);
-        }
-        cell.appendChild(group);
-        if (myTurn() && here.some((p) => p.player === game.current)) {
-          cell.classList.add("selectable");
-        }
+      if (
+        here.length > 0 &&
+        myTurn() &&
+        here.some((p) => p.player === game.current)
+      ) {
+        cell.classList.add("selectable");
       }
 
       if (moves.some((m) => m.r === r && m.c === c)) {
@@ -510,8 +495,11 @@ function renderGame() {
 
       cell.addEventListener("click", () => onCellClick(r, c));
       boardEl.appendChild(cell);
+      cellEls[r].push(cell);
     }
   }
+
+  renderPieces();
 
   // The board itself signals whose turn it is.
   boardEl.style.boxShadow =
@@ -523,6 +511,95 @@ function renderGame() {
   renderActions();
   renderPresence();
 }
+
+// Create a piece element without animating its first placement.
+function spawnPiece(className) {
+  const el = document.createElement("div");
+  el.className = className;
+  el.style.transition = "none";
+  $("pieces").appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.transition = "";
+  });
+  return el;
+}
+
+function renderPieces() {
+  // Ships (with their banked gold on the sail)
+  for (const crew of game.players) {
+    let el = shipEls.get(crew.id);
+    if (!el) {
+      el = spawnPiece(`ship p${crew.id + 1}`);
+      el.innerHTML = `<span class="glyph">⛵</span><span class="ship-gold"></span>`;
+      shipEls.set(crew.id, el);
+    }
+    const cell = cellEls[crew.ship.r][crew.ship.c];
+    el.style.width = `${cell.offsetWidth}px`;
+    el.style.height = `${cell.offsetHeight}px`;
+    el.style.transform = `translate(${cell.offsetLeft}px, ${cell.offsetTop}px)`;
+    el.classList.toggle(
+      "active",
+      crew.id === game.current && game.winner === null,
+    );
+    const goldEl = el.querySelector(".ship-gold");
+    goldEl.textContent = crew.gold;
+    goldEl.style.display = crew.gold > 0 ? "flex" : "none";
+  }
+
+  // Pirates, grouped per cell so stacks fan out side by side
+  const byCell = new Map();
+  for (const p of game.pirates) {
+    if (!p.alive) continue;
+    const k = key(p.pos.r, p.pos.c);
+    if (!byCell.has(k)) byCell.set(k, []);
+    byCell.get(k).push(p);
+  }
+
+  for (const p of game.pirates) {
+    let el = pirateEls.get(p.id);
+    if (!el) {
+      el = spawnPiece(`pirate p${p.player + 1}`);
+      pirateEls.set(p.id, el);
+    }
+    if (!p.alive) {
+      el.classList.add("dead");
+      continue;
+    }
+    el.classList.remove("dead");
+
+    const mates = byCell.get(key(p.pos.r, p.pos.c));
+    const idx = mates.indexOf(p);
+    const cell = cellEls[p.pos.r][p.pos.c];
+    const w = cell.offsetWidth;
+    const size = 18;
+    const spacing = Math.min(size + 1, (w - 6) / Math.max(mates.length, 1));
+    const x =
+      cell.offsetLeft +
+      w / 2 -
+      ((mates.length - 1) * spacing) / 2 -
+      size / 2 +
+      idx * spacing;
+    const y = cell.offsetTop + cell.offsetHeight - size - 4;
+    el.style.transform = `translate(${x}px, ${y}px)`;
+
+    el.classList.toggle("carrying", p.carrying);
+    el.classList.toggle("drunk", p.drunk > 0);
+    el.classList.toggle("trapped", p.trapped);
+    el.classList.toggle("selected", p.id === selected);
+    const under = game.tiles.get(key(p.pos.r, p.pos.c));
+    if (under?.type === "slow" && p.progress < under.steps) {
+      el.classList.add("crossing");
+      el.textContent = under.steps - p.progress;
+    } else {
+      el.classList.remove("crossing");
+      el.textContent = "";
+    }
+  }
+}
+
+window.addEventListener("resize", () => {
+  if (game && room?.started) renderPieces();
+});
 
 function renderTileContent(cell, tile) {
   const add = (cls, text) => {

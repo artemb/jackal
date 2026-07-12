@@ -493,14 +493,50 @@ body {
   cursor: pointer;
 }
 
-.ship {
+#board-frame {
+  position: relative;
+}
+
+#pieces {
   position: absolute;
   inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ship {
+  position: absolute;
+  left: 0;
+  top: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 26px;
   border-radius: 4px;
+  transition: transform 0.45s ease;
+  will-change: transform;
+}
+
+.ship .glyph {
+  line-height: 1;
+}
+
+.ship-gold {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 2px;
+  border-radius: 9px;
+  background: radial-gradient(circle at 35% 30%, #ffe08a, #d9a520);
+  border: 1px solid #a87a10;
+  color: #5c3a00;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ship.active {
@@ -555,24 +591,24 @@ body {
   z-index: 1;
 }
 
-.pirates {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 2px;
-  flex-wrap: wrap;
-  padding: 3px;
-  pointer-events: none;
-}
-
 .pirate {
-  width: 16px;
-  height: 16px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 2px solid rgba(0, 0, 0, 0.45);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 0.45s ease,
+    opacity 0.5s ease;
+  will-change: transform;
+}
+
+.pirate.dead {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .pirate.p1 {
