@@ -190,6 +190,22 @@ disagree, one of them is a bug — decide which and fix it.
   or any forced one — dies (O6). A carried coin is lost. The tile stays
   revealed.
 
+## G. Fortresses
+
+- **G1.** Every map has 3 fortress tiles; one of them is the native
+  woman's fortress.
+- **G2.** Pirates inside a fortress cannot be attacked: enemies cannot
+  enter an occupied fortress at all (it is not a legal destination).
+  Allies may share it. An empty fortress — coins on it or not — is open
+  to anyone.
+- **G3.** Forced arrivals (arrows, ice, jumps, cannons) at an
+  enemy-occupied fortress are repelled: the intruder retreats to its own
+  ship (dropping a carried coin where it last stood) and the turn is
+  spent.
+- **G4.** A pirate standing in the native woman's fortress may spend the
+  turn to revive one of its player's dead pirates. The revived pirate
+  appears in that same fortress.
+
 ## T. Turns
 
 - **T1.** Red moves first.

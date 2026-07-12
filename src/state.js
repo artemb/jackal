@@ -75,6 +75,11 @@ const CHUTE_COUNT = 2;
 // The cannibal eats any pirate who steps into its lair. There is one.
 const CANNIBAL_COUNT = 1;
 
+// Fortresses shelter their occupants from attack. One of the three is
+// home to a native woman who can revive a fallen pirate.
+const FORT_COUNT = 2;
+const NATIVE_COUNT = 1;
+
 // Horse tiles launch the pirate on a chess-knight jump.
 const HORSE_COUNT = 2;
 const KNIGHT_JUMPS = [
@@ -141,6 +146,12 @@ export function createGame() {
   for (let n = 0; n < CANNIBAL_COUNT; n++) {
     tiles.get(spots[spot++]).type = "cannibal";
   }
+  for (let n = 0; n < FORT_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "fort";
+  }
+  for (let n = 0; n < NATIVE_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "native";
+  }
 
   const players = [
     { id: 0, name: "Red", ship: { r: 12, c: 6 }, forward: -1, gold: 0 },
@@ -198,6 +209,7 @@ export function legalMoves(state, pirate) {
 
   const canEnterTile = (nr, nc) => {
     if (!isIsland(nr, nc)) return false;
+    if (fortBlocked(state, pirate, nr, nc)) return false;
     return !pirate.carrying || state.tiles.get(key(nr, nc)).open;
   };
 
@@ -259,6 +271,29 @@ export function pickUpCoin(state, pirate) {
   pirate.carrying = true;
 }
 
+// The native woman: a pirate standing in her fortress may spend the
+// turn to revive one of its player's fallen pirates, which reappears
+// in that same fortress.
+export function canRevive(state, pirate) {
+  const tile = state.tiles.get(key(pirate.pos.r, pirate.pos.c));
+  if (tile?.type !== "native") return false;
+  return state.pirates.some((p) => p.player === pirate.player && !p.alive);
+}
+
+export function revivePirate(state, pirate) {
+  if (!canRevive(state, pirate)) return;
+  const dead = state.pirates.find(
+    (p) => p.player === pirate.player && !p.alive,
+  );
+  dead.alive = true;
+  dead.pos = { ...pirate.pos };
+  dead.carrying = false;
+  dead.progress = 0;
+  dead.drunk = 0;
+  dead.trapped = false;
+  endTurn(state);
+}
+
 export function dropCoin(state, pirate) {
   if (!pirate.carrying || onShip(state, pirate)) return;
   state.tiles.get(key(pirate.pos.r, pirate.pos.c)).coins += 1;
@@ -299,6 +334,14 @@ export function movePirate(state, pirate, r, c) {
 function stepPirate(state, pirate, r, c, ctx) {
   if (isEnemyShip(state, pirate.player, r, c)) {
     kill(state, pirate);
+    endTurn(state);
+    return false;
+  }
+
+  // A fortress held by the enemy repels even forced arrivals (arrows,
+  // ice, jumps): the intruder retreats to its ship instead of fighting.
+  if (fortBlocked(state, pirate, r, c)) {
+    sendHome(state, pirate);
     endTurn(state);
     return false;
   }
@@ -450,6 +493,16 @@ function isEnemyShip(state, playerId, r, c) {
 export function isOverboard(state, pirate) {
   const { r, c } = pirate.pos;
   return !isIsland(r, c) && !onShip(state, pirate);
+}
+
+export function isFort(tile) {
+  return tile?.type === "fort" || tile?.type === "native";
+}
+
+// A fortress with enemy pirates inside cannot be entered or attacked.
+function fortBlocked(state, pirate, r, c) {
+  if (!isFort(state.tiles.get(key(r, c)))) return false;
+  return piratesAt(state, r, c).some((p) => p.player !== pirate.player);
 }
 
 function kill(state, pirate) {

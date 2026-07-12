@@ -15,6 +15,8 @@ import {
   pickUpCoin,
   dropCoin,
   chooseArrowMove,
+  canRevive,
+  revivePirate,
   ARROW_TYPES,
 } from "../src/state.js";
 
@@ -945,6 +947,80 @@ describe("L. Cannibal", () => {
     const p = s.pirates[0];
     movePirate(s, p, 11, 6); // arrow pushes it into the lair
     expect(p.alive).toBe(false);
+  });
+});
+
+describe("G. Fortresses", () => {
+  const setFort = (state, r, c, type = "fort") => {
+    const tile = state.tiles.get(key(r, c));
+    tile.type = type;
+    tile.open = true;
+  };
+
+  it("G1: every map has 2 fortresses and 1 native-woman fortress", () => {
+    const s = createGame();
+    const counts = { fort: 0, native: 0 };
+    for (const tile of s.tiles.values()) {
+      if (tile.type in counts) counts[tile.type]++;
+    }
+    expect(counts).toEqual({ fort: 2, native: 1 });
+  });
+
+  it("G2: an occupied fortress cannot be entered by enemies, allies may share", () => {
+    const s = blankGame();
+    setFort(s, 6, 6);
+    const blue = s.pirates[3];
+    placePirate(s, blue, 6, 6);
+
+    const red = s.pirates[0];
+    placePirate(s, red, 6, 5);
+    expect(has(legalMoves(s, red), 6, 6)).toBe(false); // shielded
+
+    const blue2 = s.pirates[4];
+    placePirate(s, blue2, 6, 7);
+    expect(has(legalMoves(s, blue2), 6, 6)).toBe(true); // ally welcome
+  });
+
+  it("G2: an empty fortress is open to anyone, coins or not", () => {
+    const s = blankGame();
+    setFort(s, 6, 6);
+    s.tiles.get(key(6, 6)).coins = 3;
+    const red = s.pirates[0];
+    placePirate(s, red, 6, 5);
+    expect(has(legalMoves(s, red), 6, 6)).toBe(true);
+  });
+
+  it("G3: forced arrivals are repelled: the intruder retreats to its ship", () => {
+    const s = blankGame();
+    setFort(s, 10, 6);
+    const blue = s.pirates[3];
+    placePirate(s, blue, 10, 6);
+    setArrow(s, 11, 6, [[-1, 0]]);
+    const red = s.pirates[0];
+    movePirate(s, red, 11, 6); // arrow fires it at the held fortress
+    expect(red.pos).toEqual({ r: 12, c: 6 }); // repelled home
+    expect(blue.pos).toEqual({ r: 10, c: 6 }); // the defender is untouched
+    expect(s.current).toBe(1);
+  });
+
+  it("G4: the native woman revives a fallen pirate in her fortress", () => {
+    const s = blankGame();
+    setFort(s, 6, 6, "native");
+    const [p, q] = s.pirates;
+    placePirate(s, q, 1, 6);
+    movePirate(s, q, 0, 6); // q boards the enemy ship and dies
+    expect(q.alive).toBe(false);
+
+    placePirate(s, p, 6, 6);
+    s.current = 0;
+    expect(canRevive(s, p)).toBe(true);
+    revivePirate(s, p);
+    expect(q.alive).toBe(true);
+    expect(q.pos).toEqual({ r: 6, c: 6 }); // reborn in the fortress
+    expect(s.current).toBe(1); // reviving spends the turn
+
+    s.current = 0;
+    expect(canRevive(s, p)).toBe(false); // nobody left to revive
   });
 });
 

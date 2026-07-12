@@ -172,6 +172,11 @@ body {
   border-color: #9c5f4e;
 }
 
+.cell.tile.fort.open {
+  background: #d5d2c8;
+  border-color: #a7a294;
+}
+
 .cell.tile.slow.open.jungle {
   background: #a4c17e;
   border-color: #7d9c5b;

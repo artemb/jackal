@@ -13,6 +13,8 @@ import {
   pickUpCoin,
   dropCoin,
   chooseArrowMove,
+  canRevive,
+  revivePirate,
 } from "./state.js";
 
 const SLOW_GLYPHS = {
@@ -190,6 +192,13 @@ function render() {
           terrainEl.textContent = "💀";
           cell.appendChild(terrainEl);
         }
+        if (tile.open && (tile.type === "fort" || tile.type === "native")) {
+          cell.classList.add("fort");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = tile.type === "native" ? "💃" : "🏰";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");
@@ -315,6 +324,16 @@ function renderActions() {
     btn.textContent = "Drop coin";
     btn.addEventListener("click", () => {
       dropCoin(state, pirate);
+      render();
+    });
+    actionsEl.appendChild(btn);
+  }
+
+  if (canRevive(state, pirate)) {
+    const btn = document.createElement("button");
+    btn.textContent = "Revive a fallen pirate (spends the turn)";
+    btn.addEventListener("click", () => {
+      revivePirate(state, pirate);
       render();
     });
     actionsEl.appendChild(btn);
