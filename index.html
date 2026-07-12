@@ -27,6 +27,11 @@
             <p>You were invited to game <b id="join-code"></b>.</p>
             <button id="join-btn">Join the game</button>
           </div>
+          <label>
+            Or join with a game code
+            <input id="code-input" maxlength="6" placeholder="e.g. 5A4D2C" />
+          </label>
+          <button id="join-code-btn">Join by code</button>
         </div>
       </section>
 
@@ -36,6 +41,10 @@
             Share this link with your friends:
             <input id="share-link" readonly />
             <button id="copy-btn">Copy</button>
+          </p>
+          <p>
+            Or tell them the game code:
+            <input id="game-code" readonly class="code" />
           </p>
           <label>
             Your name

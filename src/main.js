@@ -161,6 +161,10 @@ $("create-btn").addEventListener("click", () => {
 $("join-btn").addEventListener("click", () => {
   send({ t: "join", room: urlRoom, clientId: myId, name: myName() });
 });
+$("join-code-btn").addEventListener("click", () => {
+  const code = $("code-input").value.trim().toUpperCase();
+  if (code) send({ t: "join", room: code, clientId: myId, name: myName() });
+});
 
 // ------------------------------------------------------------------ lobby
 const CREW_NAMES = ["Red", "Blue", "Green", "Yellow"];
@@ -223,6 +227,7 @@ function renderLobby() {
   turnEl.textContent = "Lobby";
   scoresEl.textContent = `Game ${room.id}`;
   $("share-link").value = `${location.origin}/?room=${room.id}`;
+  $("game-code").value = room.id;
 
   const rename = $("rename-input");
   if (document.activeElement !== rename) {
@@ -446,6 +451,13 @@ function renderGame() {
           if (p.drunk > 0) el.classList.add("drunk");
           if (p.trapped) el.classList.add("trapped");
           if (p.id === selected) el.classList.add("selected");
+          // Mid-crossing on a slow tile: show the turns this pirate
+          // still needs before it can move on.
+          const under = game.tiles.get(key(r, c));
+          if (under?.type === "slow" && p.progress < under.steps) {
+            el.classList.add("crossing");
+            el.textContent = under.steps - p.progress;
+          }
           group.appendChild(el);
         }
         cell.appendChild(group);

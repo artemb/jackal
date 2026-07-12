@@ -575,6 +575,25 @@ body {
   opacity: 0.5;
 }
 
+.pirate.crossing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.code {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 16px;
+  letter-spacing: 2px;
+  width: 110px;
+  text-align: center;
+}
+
 .pirate.trapped {
   filter: grayscale(0.8);
 }
