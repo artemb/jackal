@@ -183,6 +183,13 @@ disagree, one of them is a bug — decide which and fix it.
 - **H3.** A knight jump onto ice slides one further cell in the jump's
   direction, normalized to a single (diagonal) step (I2).
 
+## L. Cannibal
+
+- **L1.** Every map has exactly 1 cannibal tile.
+- **L2.** Any pirate that ends up on the cannibal tile — by a chosen move
+  or any forced one — dies (O6). A carried coin is lost. The tile stays
+  revealed.
+
 ## T. Turns
 
 - **T1.** Red moves first.

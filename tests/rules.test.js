@@ -920,6 +920,34 @@ describe("H. Horse", () => {
   });
 });
 
+describe("L. Cannibal", () => {
+  it("L1: every map has exactly 1 cannibal tile", () => {
+    const s = createGame();
+    let n = 0;
+    for (const tile of s.tiles.values()) if (tile.type === "cannibal") n++;
+    expect(n).toBe(1);
+  });
+
+  it("L2: stepping onto the cannibal is fatal, the tile stays revealed", () => {
+    const s = blankGame();
+    s.tiles.get(key(11, 6)).type = "cannibal";
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6);
+    expect(p.alive).toBe(false);
+    expect(s.tiles.get(key(11, 6)).open).toBe(true);
+    expect(s.current).toBe(1);
+  });
+
+  it("L2: forced moves into the cannibal are fatal too", () => {
+    const s = blankGame();
+    setArrow(s, 11, 6, [[-1, 0]]);
+    s.tiles.get(key(10, 6)).type = "cannibal";
+    const p = s.pirates[0];
+    movePirate(s, p, 11, 6); // arrow pushes it into the lair
+    expect(p.alive).toBe(false);
+  });
+});
+
 describe("T. Turns", () => {
   it("T1: Red moves first", () => {
     const s = blankGame();

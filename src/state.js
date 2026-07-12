@@ -72,6 +72,9 @@ const TRAP_COUNT = 3;
 // Parachute tiles fly the pirate straight back to its ship.
 const CHUTE_COUNT = 2;
 
+// The cannibal eats any pirate who steps into its lair. There is one.
+const CANNIBAL_COUNT = 1;
+
 // Horse tiles launch the pirate on a chess-knight jump.
 const HORSE_COUNT = 2;
 const KNIGHT_JUMPS = [
@@ -134,6 +137,9 @@ export function createGame() {
   }
   for (let n = 0; n < HORSE_COUNT; n++) {
     tiles.get(spots[spot++]).type = "horse";
+  }
+  for (let n = 0; n < CANNIBAL_COUNT; n++) {
+    tiles.get(spots[spot++]).type = "cannibal";
   }
 
   const players = [
@@ -364,6 +370,13 @@ function stepPirate(state, pirate, r, c, ctx) {
     }
     state.pending = { pirateId: pirate.id, options, ctx };
     state.selected = { kind: "pirate", id: pirate.id };
+    return flipped;
+  }
+
+  if (tile?.type === "cannibal") {
+    // Eaten. The tile stays revealed as a warning to the others.
+    kill(state, pirate);
+    endTurn(state);
     return flipped;
   }
 

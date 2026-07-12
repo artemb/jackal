@@ -183,6 +183,13 @@ function render() {
           terrainEl.textContent = "🐎";
           cell.appendChild(terrainEl);
         }
+        if (tile.open && tile.type === "cannibal") {
+          cell.classList.add("cannibal");
+          const terrainEl = document.createElement("div");
+          terrainEl.className = "terrain";
+          terrainEl.textContent = "💀";
+          cell.appendChild(terrainEl);
+        }
         if (tile.open && tile.type === "arrow") {
           cell.classList.add("arrow");
           const arrowsEl = document.createElement("div");
