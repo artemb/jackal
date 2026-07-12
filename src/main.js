@@ -23,6 +23,7 @@ let room = null; // latest room snapshot from the server
 let game = null; // deserialized game state (authoritative copy)
 let selected = null; // locally selected pirate id
 let flippedKeys = new Set(); // cells to play the flip animation on
+let logEntries = []; // game history from the server
 let urlRoom = new URLSearchParams(location.search).get("room");
 
 // -------------------------------------------------------------------- dom
@@ -101,10 +102,35 @@ function handleMessage(msg) {
       flippedKeys = new Set();
       break;
     }
+    case "log":
+      if (msg.reset) logEntries = msg.entries;
+      else logEntries.push(...msg.entries);
+      if (logEntries.length > 300) logEntries = logEntries.slice(-300);
+      renderLog();
+      break;
     case "error":
       showHint(msg.msg);
       break;
   }
+}
+
+function renderLog() {
+  const el = $("game-log");
+  el.innerHTML = "";
+  for (const entry of logEntries) {
+    const row = document.createElement("div");
+    row.className = "log-entry";
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background =
+      entry.crew != null ? `var(--p${entry.crew + 1})` : "#ffd75e";
+    row.appendChild(dot);
+    const text = document.createElement("span");
+    text.textContent = entry.text;
+    row.appendChild(text);
+    el.appendChild(row);
+  }
+  el.scrollTop = el.scrollHeight;
 }
 
 function myName() {

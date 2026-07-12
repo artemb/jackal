@@ -19,6 +19,7 @@ import {
   dropCoin,
   canRevive,
   revivePirate,
+  isIsland,
 } from "../src/state.js";
 import { chooseBotAction, chooseBotChoice } from "../src/bot.js";
 
@@ -38,6 +39,7 @@ function maybeBotTurn(room) {
     room.botTimer = null;
     const g = room.game;
     if (!g || g.winner !== null || room.seats[g.current] !== BOT) return;
+    const pre = snapshot(room);
     try {
       if (g.pending) {
         chooseArrowMove(g, chooseBotChoice(g, g.current));
@@ -60,6 +62,7 @@ function maybeBotTurn(room) {
       console.error("bot turn failed:", e);
       return;
     }
+    logDiff(room, pre);
     broadcastGame(room);
     maybeBotTurn(room); // chains through bot pendings and successive bots
   }, BOT_DELAY);
@@ -101,6 +104,167 @@ function broadcastGame(room) {
 }
 
 const inList = (list, r, c) => list.some((m) => m.r === r && m.c === c);
+
+// ------------------------------------------------------------ game log
+// Entries are derived by diffing the serialized state around every
+// applied action, so humans and bots produce the same history.
+
+const coord = (pos) => String.fromCharCode(65 + pos.c) + (pos.r + 1);
+const samePos = (a, b) => a.r === b.r && a.c === b.c;
+
+const TILE_NAMES = {
+  empty: "empty ground",
+  croc: "a crocodile",
+  rum: "a rum barrel",
+  ice: "ice",
+  trap: "a trap",
+  chute: "a parachute",
+  horse: "a horse",
+  cannibal: "the cannibal",
+  fort: "a fortress",
+  native: "the native woman's fortress",
+  cannon: "a cannon",
+  plane: "the aeroplane",
+  arrow: "an arrow",
+};
+
+function tileName(tile) {
+  if (tile.type === "slow") return `a ${tile.slow} (${tile.steps} turns)`;
+  return TILE_NAMES[tile.type] ?? tile.type;
+}
+
+function seatName(room, crewId) {
+  const pid = room.seats[crewId];
+  if (pid === BOT) return "Computer";
+  return room.players.get(pid)?.name ?? "?";
+}
+
+function describeDiff(pre, post, room) {
+  const out = [];
+  const crewId = pre.current;
+  const actor = `${pre.players[crewId].name} (${seatName(room, crewId)})`;
+  const push = (text, c = crewId) => out.push({ crew: c, text });
+
+  const goldDelta = post.players.map((pl, i) => pl.gold - pre.players[i].gold);
+  const lostDelta = (post.lostCoins ?? 0) - (pre.lostCoins ?? 0);
+  const postTiles = new Map(post.tiles);
+  const preTiles = new Map(pre.tiles);
+
+  const preShip = pre.players[crewId].ship;
+  const postShip = post.players[crewId].ship;
+  const shipMoved = !samePos(preShip, postShip);
+  if (shipMoved) push(`${actor} sailed the ship to ${coord(postShip)}`);
+
+  const overboard = (p) =>
+    !isIsland(p.pos.r, p.pos.c) &&
+    !post.players.some(
+      (pl) =>
+        pl.team === post.players[p.player].team && samePos(pl.ship, p.pos),
+    );
+
+  const postP = new Map(post.pirates.map((p) => [p.id, p]));
+  for (const a of pre.pirates) {
+    const b = postP.get(a.id);
+    const owner = pre.players[a.player];
+    const moved = !samePos(a.pos, b.pos);
+
+    if (a.alive && !b.alive) {
+      push(`☠️ ${owner.name}'s pirate died`, a.player);
+      continue;
+    }
+    if (!a.alive && b.alive) {
+      push(`${actor} revived a pirate at ${coord(b.pos)}`);
+      continue;
+    }
+    if (!a.alive) continue;
+
+    if (moved && a.player === crewId) {
+      // pirates riding the ship are covered by the ship line
+      if (shipMoved && samePos(a.pos, preShip) && samePos(b.pos, postShip)) {
+        continue;
+      }
+      let text = `${actor} moved a pirate ${coord(a.pos)} → ${coord(b.pos)}`;
+      const also = [];
+      if (b.drunk > 0 && a.drunk === 0) also.push("passed out on the rum");
+      if (b.trapped && !a.trapped) also.push("got caught in the trap");
+      if (overboard(b)) also.push("went overboard");
+      if (also.length) text += ` and ${also.join(" and ")}`;
+      push(text);
+    } else if (moved && owner.team !== pre.players[crewId].team) {
+      push(`⚔️ ${owner.name}'s pirate was sent back to its ship`, a.player);
+    }
+
+    if (!moved && a.player === crewId && b.progress > a.progress) {
+      const tile = postTiles.get(`${b.pos.r},${b.pos.c}`);
+      if (tile?.type === "slow") {
+        const left = tile.steps - b.progress;
+        push(
+          `${actor} kept crossing the ${tile.slow} at ${coord(b.pos)}` +
+            (left > 0 ? ` (${left} turn${left > 1 ? "s" : ""} left)` : " — through!"),
+        );
+      }
+    }
+
+    if (!a.carrying && b.carrying) {
+      push(`${actor} picked up a coin at ${coord(b.pos)}`);
+    }
+    if (
+      a.carrying &&
+      !b.carrying &&
+      a.player === crewId &&
+      goldDelta[crewId] === 0 &&
+      lostDelta === 0 &&
+      samePos(a.pos, b.pos)
+    ) {
+      push(`${actor} dropped a coin at ${coord(b.pos)}`);
+    }
+  }
+
+  for (const [k, tile] of postTiles) {
+    if (tile.open && !preTiles.get(k).open) {
+      const [r, c] = k.split(",").map(Number);
+      const coins = tile.coins
+        ? ` with ${tile.coins} coin${tile.coins > 1 ? "s" : ""}`
+        : "";
+      push(`🔍 revealed ${tileName(tile)}${coins} at ${coord({ r, c })}`);
+    }
+  }
+
+  post.players.forEach((pl, i) => {
+    if (goldDelta[i] > 0) {
+      push(
+        `🪙 ${pl.name} banked ${goldDelta[i] === 1 ? "a coin" : `${goldDelta[i]} coins`} (${pl.gold} total)`,
+        i,
+      );
+    }
+  });
+  if (lostDelta > 0) push("💧 a coin was lost forever");
+
+  if (post.pending && !pre.pending && room.seats[crewId] !== BOT) {
+    push(`${actor} must choose where the pirate flies`);
+  }
+
+  if (post.winner !== null && pre.winner === null) {
+    const names = post.players
+      .filter((p) => p.team === post.winner)
+      .map((p) => p.name)
+      .join(" & ");
+    out.push({ crew: null, text: `🏴‍☠️ ${names} win the game!` });
+  }
+  return out;
+}
+
+function snapshot(room) {
+  return JSON.parse(JSON.stringify(serializeGame(room.game)));
+}
+
+function logDiff(room, pre) {
+  const entries = describeDiff(pre, serializeGame(room.game), room);
+  if (entries.length === 0) return;
+  room.log.push(...entries);
+  if (room.log.length > 300) room.log = room.log.slice(-300);
+  broadcast(room, { t: "log", entries });
+}
 
 // Apply a player's action to the room's game. Returns an error string
 // or null on success. The server re-derives legality itself: a client
@@ -169,7 +333,10 @@ function joinRoom(room, ws, msg) {
   ws.pid = player.id;
   send(ws, { t: "joined", room: room.id, you: player.id });
   broadcastRoom(room);
-  if (room.game) send(ws, { t: "game", state: serializeGame(room.game) });
+  if (room.game) {
+    send(ws, { t: "game", state: serializeGame(room.game) });
+    send(ws, { t: "log", entries: room.log, reset: true });
+  }
 }
 
 function handleMessage(ws, msg) {
@@ -181,6 +348,7 @@ function handleMessage(ws, msg) {
         host: msg.clientId,
         seats: [null, null, null, null],
         game: null,
+        log: [],
       };
       rooms.set(room.id, room);
       joinRoom(room, ws, msg);
@@ -242,14 +410,18 @@ function handleMessage(ws, msg) {
       const uniq = [...new Set(controllers)];
       const teams = controllers.map((c) => uniq.indexOf(c));
       room.game = createGame({ teams });
+      room.log = [{ crew: null, text: "⚓ The game begins — Red moves first" }];
       broadcastRoom(room);
       broadcastGame(room);
+      broadcast(room, { t: "log", entries: room.log, reset: true });
       maybeBotTurn(room);
       return;
     }
     case "action": {
+      const pre = room.game ? snapshot(room) : null;
       const err = applyAction(room, ws.pid, msg.a ?? {});
       if (err) return send(ws, { t: "error", msg: err });
+      if (pre) logDiff(room, pre);
       broadcastGame(room);
       maybeBotTurn(room);
       return;

@@ -133,6 +133,59 @@ section + section { margin-top: 120px; }
 
 .concept-sheet a { color: #f3be55; text-underline-offset: 4px; }
 
+.concept-sheet.muted { filter: saturate(.7); opacity: .76; }
+
+.board-sheet {
+  width: min(860px, 100%);
+  margin-inline: auto;
+}
+
+.accuracy-note {
+  width: min(860px, 100%);
+  margin: 16px auto 0;
+  color: rgba(20, 52, 55, .7);
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.scale-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.scale-grid article {
+  min-height: 250px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: space-between;
+  overflow: hidden;
+  border: 1px solid rgba(20, 52, 55, .3);
+  border-radius: 8px;
+  background: rgba(255, 249, 233, .32);
+}
+
+.scale-grid span {
+  color: var(--coral);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+
+.scale-grid img {
+  display: block;
+  height: auto;
+  box-shadow: 0 8px 22px rgba(49, 38, 17, .16);
+}
+
+.scale-desktop { width: 248px; }
+.scale-mobile { width: 128px; }
+
 .principle-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -192,6 +245,7 @@ footer {
   main { padding-top: 65px; }
   section + section { margin-top: 85px; }
   .section-heading, .review { grid-template-columns: 1fr; gap: 24px; }
+  .scale-grid { grid-template-columns: 1fr; }
   .concept-sheet { padding: 7px; }
   .concept-sheet figcaption { align-items: flex-start; flex-direction: column; gap: 8px; }
   .principle-grid { grid-template-columns: 1fr 1fr; }
