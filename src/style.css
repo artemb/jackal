@@ -135,6 +135,69 @@ body {
   opacity: 0.75;
 }
 
+#sidebar-seats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    ". north ."
+    "west center east"
+    ". south .";
+  gap: 4px;
+  align-items: center;
+  justify-items: center;
+}
+
+#sidebar-seats .seat-card {
+  min-width: 0;
+  padding: 4px;
+  font-size: 12px;
+}
+
+#sidebar-seats .seat-card select {
+  font-size: 12px;
+  max-width: 90px;
+}
+
+#sidebar-seats .seat-center {
+  font-size: 20px;
+}
+
+#seats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    ". north ."
+    "west center east"
+    ". south .";
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+}
+
+.seat-center {
+  grid-area: center;
+  font-size: 34px;
+}
+
+.seat-card {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  min-width: 130px;
+  background: #0d3b57;
+}
+
+.seat-card header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+}
+
 .seat-row {
   display: flex;
   align-items: center;
@@ -413,6 +476,24 @@ body {
   justify-content: center;
   font-size: 26px;
   border-radius: 4px;
+}
+
+.ship.active {
+  animation: ship-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ship-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 2px 1px #ffd75e;
+  }
+  50% {
+    box-shadow: 0 0 12px 5px #ffd75e;
+  }
+}
+
+#board {
+  transition: box-shadow 0.4s ease;
 }
 
 .ship.p1 {

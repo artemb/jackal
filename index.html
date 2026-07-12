@@ -37,12 +37,17 @@
             <input id="share-link" readonly />
             <button id="copy-btn">Copy</button>
           </p>
+          <label>
+            Your name
+            <input id="rename-input" maxlength="20" />
+          </label>
           <div id="lobby-players"></div>
-          <div id="seats"></div>
           <p class="note">
-            Crews controlled by the same player are allies. With two players
-            give each two opposite crews.
+            The crews are laid out as they sit around the island. Crews
+            controlled by the same player are allies — with two players give
+            each two opposite crews.
           </p>
+          <div id="seats"></div>
           <button id="start-btn" class="hidden">Start the game</button>
           <p id="lobby-hint" class="note"></p>
         </div>

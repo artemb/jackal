@@ -157,12 +157,25 @@ function handleMessage(ws, msg) {
   if (!room) return send(ws, { t: "error", msg: "Join a game first" });
 
   switch (msg.t) {
+    case "rename": {
+      const player = room.players.get(ws.pid);
+      const name = String(msg.name ?? "").trim().slice(0, 20);
+      if (!player || !name) return;
+      player.name = name;
+      broadcastRoom(room);
+      return;
+    }
     case "seat": {
+      // Seats may be reassigned even mid-game, so the host can hand a
+      // crew to another player if someone's device dies. Alliances are
+      // fixed at start; this only changes who drives the crew.
       if (ws.pid !== room.host) return send(ws, { t: "error", msg: "Only the host assigns seats" });
-      if (room.game) return send(ws, { t: "error", msg: "The game already started" });
       const seat = msg.crew;
       if (!(seat >= 0 && seat < 4)) return;
       if (msg.playerId !== null && !room.players.has(msg.playerId)) return;
+      if (room.game && msg.playerId === null) {
+        return send(ws, { t: "error", msg: "A started game needs every crew driven" });
+      }
       room.seats[seat] = msg.playerId;
       broadcastRoom(room);
       return;

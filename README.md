@@ -91,7 +91,12 @@ allies, so two players take two opposite crews each — and starts the
 game. The server owns the game state and validates every action; clients
 just render and submit moves. Presence is live: everyone sees who is
 connected, and players who drop off are marked until they reconnect
-(same browser re-joins into its seat automatically).
+(same browser re-joins into its seat automatically). Players can rename
+themselves in the lobby; seats are laid out around a little island the
+way the crews sit on the board. If someone disappears for good, the
+host can hand their crew to another player mid-game from the sidebar —
+alliances stay as they were at the start. The first team to bank more
+gold than any rival can still reach wins on the spot.
 
 ## Planned next
 

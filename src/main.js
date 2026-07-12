@@ -164,11 +164,71 @@ $("join-btn").addEventListener("click", () => {
 
 // ------------------------------------------------------------------ lobby
 const CREW_NAMES = ["Red", "Blue", "Green", "Yellow"];
+// Where each crew sits around the island, mirroring the board.
+const CREW_AREAS = ["south", "north", "west", "east"];
+
+function seatCard(crew, editable) {
+  const seatPid = room.seats[crew];
+  const card = document.createElement("div");
+  card.className = "seat-card";
+  card.style.borderColor = `var(--p${crew + 1})`;
+  card.style.gridArea = CREW_AREAS[crew];
+
+  const head = document.createElement("header");
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  dot.style.background = `var(--p${crew + 1})`;
+  head.appendChild(dot);
+  head.appendChild(document.createTextNode(` ${CREW_NAMES[crew]}`));
+  card.appendChild(head);
+
+  if (editable) {
+    const sel = document.createElement("select");
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "— unassigned —";
+    sel.appendChild(none);
+    for (const p of room.players) {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      if (seatPid === p.id) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener("change", () => {
+      send({ t: "seat", crew, playerId: sel.value || null });
+    });
+    card.appendChild(sel);
+  } else {
+    const holder = room.players.find((p) => p.id === seatPid);
+    const label = document.createElement("span");
+    label.textContent = holder ? holder.name : "— unassigned —";
+    card.appendChild(label);
+  }
+  return card;
+}
+
+function renderSeats(container, editable) {
+  container.innerHTML = "";
+  const center = document.createElement("div");
+  center.className = "seat-center";
+  center.textContent = "🏝️";
+  container.appendChild(center);
+  for (let crew = 0; crew < 4; crew++) {
+    container.appendChild(seatCard(crew, editable));
+  }
+}
 
 function renderLobby() {
   turnEl.textContent = "Lobby";
   scoresEl.textContent = `Game ${room.id}`;
   $("share-link").value = `${location.origin}/?room=${room.id}`;
+
+  const rename = $("rename-input");
+  if (document.activeElement !== rename) {
+    rename.value =
+      room.players.find((p) => p.id === myId)?.name ?? myName();
+  }
 
   const playersEl = $("lobby-players");
   playersEl.innerHTML = "";
@@ -176,46 +236,16 @@ function renderLobby() {
     playersEl.appendChild(playerBadge(p));
   }
 
-  const seatsEl = $("seats");
-  seatsEl.innerHTML = "";
-  const isHost = room.host === myId;
-  room.seats.forEach((seatPid, crew) => {
-    const row = document.createElement("div");
-    row.className = "seat-row";
-    const dot = document.createElement("span");
-    dot.className = "dot";
-    dot.style.background = `var(--p${crew + 1})`;
-    row.appendChild(dot);
-    row.appendChild(document.createTextNode(` ${CREW_NAMES[crew]} crew: `));
-    if (isHost) {
-      const sel = document.createElement("select");
-      const none = document.createElement("option");
-      none.value = "";
-      none.textContent = "— unassigned —";
-      sel.appendChild(none);
-      for (const p of room.players) {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.name;
-        if (seatPid === p.id) opt.selected = true;
-        sel.appendChild(opt);
-      }
-      sel.addEventListener("change", () => {
-        send({ t: "seat", crew, playerId: sel.value || null });
-      });
-      row.appendChild(sel);
-    } else {
-      const holder = room.players.find((p) => p.id === seatPid);
-      row.appendChild(
-        document.createTextNode(holder ? holder.name : "— unassigned —"),
-      );
-    }
-    seatsEl.appendChild(row);
-  });
-
-  const startBtn = $("start-btn");
-  startBtn.classList.toggle("hidden", !isHost);
+  renderSeats($("seats"), room.host === myId);
+  $("start-btn").classList.toggle("hidden", room.host !== myId);
 }
+
+$("rename-input").addEventListener("change", () => {
+  const name = $("rename-input").value.trim();
+  if (!name) return;
+  localStorage.setItem("jackalName", name);
+  send({ t: "rename", name });
+});
 
 function playerBadge(p, seats = false) {
   const el = document.createElement("div");
@@ -322,6 +352,44 @@ function shipAt(r, c) {
   return game.players.find((p) => p.ship.r === r && p.ship.c === c) ?? null;
 }
 
+// Mouse-over rule hints, one per tile kind.
+const TILE_HINTS = {
+  empty: "Empty ground.",
+  croc: "Crocodile — chases the pirate back to where its turn began.",
+  rum: "Rum barrel — the pirate sleeps through its player's next turn.",
+  ice: "Ice — the pirate slides one more cell in the direction it entered.",
+  trap: "Trap — a lone pirate is stuck here until an ally steps in; that frees both.",
+  chute: "Parachute — flies the pirate straight back aboard its ship (a carried coin is stashed).",
+  horse: "Horse — the pirate immediately jumps like a chess knight to a cell of its choice.",
+  cannibal: "Cannibal — any pirate who steps here dies.",
+  fort: "Fortress — pirates inside cannot be attacked, and enemies cannot enter while it is occupied.",
+  native:
+    "Native woman's fortress — protects like a fortress; a pirate here may spend the turn to revive a dead crewmate.",
+  cannon:
+    "Cannon — fires the pirate over the island into the water in the direction it faces.",
+  arrow:
+    "Arrow — the pirate must immediately fly on in one of the indicated directions (your choice if several).",
+};
+
+function tileHint(tile) {
+  let hint;
+  if (!tile.open) {
+    hint = "Unexplored tile — move a pirate onto it to flip it.";
+  } else if (tile.type === "slow") {
+    hint = `${tile.slow[0].toUpperCase()}${tile.slow.slice(1)} — takes ${tile.steps} turns to cross (step in place until done).`;
+  } else if (tile.type === "plane") {
+    hint = tile.used
+      ? "Aeroplane (already used) — now just ordinary ground."
+      : "Aeroplane — the next move from this tile may go anywhere on the board (one use).";
+  } else {
+    hint = TILE_HINTS[tile.type] ?? "";
+  }
+  if (tile.open && tile.coins > 0) {
+    hint += ` ${tile.coins} coin${tile.coins > 1 ? "s" : ""} here — a pirate standing on them can pick one up (free action).`;
+  }
+  return hint;
+}
+
 function renderGame() {
   // Drop a stale selection from an earlier turn.
   const sel = selectedPirate();
@@ -340,6 +408,7 @@ function renderGame() {
         const tile = game.tiles.get(key(r, c));
         cell.classList.add("tile", tile.open ? "open" : "closed");
         if (flippedKeys.has(key(r, c))) cell.classList.add("flipping");
+        cell.title = tileHint(tile);
 
         if (tile.open) renderTileContent(cell, tile);
         if (tile.open && tile.coins > 0) {
@@ -350,6 +419,8 @@ function renderGame() {
         }
       } else {
         cell.classList.add("sea");
+        cell.title =
+          "Open sea — pirates thrown overboard swim here one cell per turn and can climb back aboard their own ship.";
       }
 
       const ship = shipAt(r, c);
@@ -357,7 +428,11 @@ function renderGame() {
         const shipEl = document.createElement("div");
         shipEl.className = `ship p${ship.id + 1}`;
         shipEl.textContent = "⛵";
+        if (ship.id === game.current && game.winner === null) {
+          shipEl.classList.add("active");
+        }
         cell.appendChild(shipEl);
+        cell.title = `${ship.name}'s ship — pirates disembark straight ahead; sailing needs a pirate aboard. Boarding a friendly ship stashes a carried coin; an enemy ship is fatal.`;
       }
 
       const here = piratesAt(game, r, c);
@@ -387,6 +462,12 @@ function renderGame() {
       boardEl.appendChild(cell);
     }
   }
+
+  // The board itself signals whose turn it is.
+  boardEl.style.boxShadow =
+    game.winner !== null
+      ? "0 0 26px 4px #ffd75e"
+      : `0 0 22px 3px var(--p${game.current + 1})`;
 
   renderStatus();
   renderActions();
@@ -546,6 +627,16 @@ function renderPresence() {
   el.innerHTML = "";
   for (const p of room.players) {
     el.appendChild(playerBadge(p, true));
+  }
+  // The host can hand a crew over mid-game (e.g. someone's device died).
+  if (room.host === myId) {
+    const h = document.createElement("h2");
+    h.textContent = "Reassign crews";
+    el.appendChild(h);
+    const seats = document.createElement("div");
+    seats.id = "sidebar-seats";
+    renderSeats(seats, true);
+    el.appendChild(seats);
   }
 }
 
